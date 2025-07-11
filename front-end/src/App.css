@@ -1,0 +1,63 @@
+.App {
+  text-align: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #a8e063 0%, #56ab2f 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 2vw;
+}
+
+.App-header {
+  background: rgba(255, 255, 255, 0.85);
+  padding: 5vw 4vw;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(34, 49, 63, 0.15);
+  max-width: 90vw;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.main-title {
+  font-size: clamp(1.5rem, 6vw, 2.5rem);
+  color: #2d572c;
+  margin-bottom: 16px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-weight: 700;
+}
+
+.subtitle {
+  font-size: 1.25rem;
+  color: #3a3a3a;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.sensor-btn {
+  margin-top: 24px;
+  padding: 12px 28px;
+  background: #388e3c;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sensor-btn:hover {
+  background: #2e7d32;
+}
+
+/* Responsive adjustments for small screens */
+@media (max-width: 600px) {
+  .App-header {
+    padding: 8vw 2vw;
+  }
+  .main-title {
+    font-size: 1.5rem;
+  }
+  .subtitle {
+    font-size: 1rem;
+  }
+}
