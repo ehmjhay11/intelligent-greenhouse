@@ -1,4 +1,4 @@
-.soil-moisture-gauge-container {
+.light-sensor-gauge-container {
   width: 100%;
   max-width: 280px;
   min-width: 200px;
@@ -9,17 +9,46 @@
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.3s ease;
   position: relative;
   z-index: 1;
 }
 
-.soil-moisture-gauge-container:hover {
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.light-sensor-gauge-container:hover {ainer {
+  width: 100%;
+  max-width: 280px;
+  min-width: 200px;
+  text-align: center;
+  margin: 0 auto;
+  padding: 1rem;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+  position: relative;
+  z-index: 1;
+}
+
+.light-sensor-gauge-container:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
-.soil-moisture-gauge-svg {
+.light-sensor-gauge-svg {
   display: block;
   margin: 0 auto;
   width: 100%;
@@ -29,14 +58,14 @@
   shape-rendering: geometricPrecision;
 }
 
-.soil-moisture-gauge-label {
+.light-sensor-gauge-label {
   font-size: clamp(12px, 2.5vw, 16px);
   fill: #495057;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   font-weight: 500;
 }
 
-.soil-moisture-gauge-value {
+.light-sensor-gauge-value {
   font-size: clamp(18px, 4vw, 24px);
   fill: #212529;
   font-weight: bold;
@@ -58,7 +87,7 @@
   transition: stroke 0.3s ease;
 }
 
-/* New: Status Section */
+/* Status Section */
 .status-section {
   margin-top: 0.75rem;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -82,30 +111,30 @@
 
 /* Responsive Breakpoints */
 @media (max-width: 768px) {
-  .soil-moisture-gauge-container {
+  .light-sensor-gauge-container {
     max-width: 240px;
     padding: 0.75rem;
   }
 }
 
 @media (max-width: 480px) {
-  .soil-moisture-gauge-container {
+  .light-sensor-gauge-container {
     max-width: 200px;
     padding: 0.5rem;
   }
 
-  .soil-moisture-gauge-svg {
+  .light-sensor-gauge-svg {
     max-width: 180px;
   }
 }
 
 @media (max-width: 320px) {
-  .soil-moisture-gauge-container {
+  .light-sensor-gauge-container {
     max-width: 180px;
     padding: 0.25rem;
   }
 
-  .soil-moisture-gauge-svg {
+  .light-sensor-gauge-svg {
     max-width: 160px;
   }
 }

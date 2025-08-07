@@ -1,11 +1,15 @@
 import React from 'react';
-import './soil_moisture.css';
+import './lightSensor.css';
 
-const SoilMoistureGauge = ({ moisture = 0, status = 'Disconnected', lastUpdate = 'No data' }) => {
+const LightSensorGauge = ({ 
+  lightLevel = 0, 
+  status = 'Disconnected', 
+  lastUpdate = 'No data' 
+}) => {
   const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
-  const value = clamp(moisture, 0, 100);
+  const value = clamp(lightLevel, 0, 100);
   
-  // Simple arc calculation for half-circle gauge
+  // Calculate arc parameters for half-circle gauge
   const radius = 80;
   const centerX = 100;
   const centerY = 100;
@@ -15,15 +19,26 @@ const SoilMoistureGauge = ({ moisture = 0, status = 'Disconnected', lastUpdate =
   // Calculate needle rotation (0-180 degrees)
   const needleRotation = (value / 100) * 180;
   
-  // Determine gauge color based on moisture level
-  const getGaugeColor = (moisture) => {
-    if (moisture < 30) return '#f44336'; // Red - dry
-    if (moisture < 60) return '#ff9800'; // Orange - moderate
-    return '#4caf50'; // Green - moist
+  // Determine gauge color based on light level
+  const getGaugeColor = (light) => {
+    if (light < 20) return '#4A148C'; // Dark purple - very low light
+    if (light < 40) return '#7B1FA2'; // Purple - low light
+    if (light < 60) return '#FFC107'; // Amber - moderate light
+    if (light < 80) return '#FF9800'; // Orange - good light
+    return '#FF5722'; // Red-orange - very bright light
+  };
+
+  // Get light level description
+  const getLightDescription = (light) => {
+    if (light < 20) return 'Very Low';
+    if (light < 40) return 'Low';
+    if (light < 60) return 'Moderate';
+    if (light < 80) return 'Good';
+    return 'Very Bright';
   };
 
   return (
-    <div className="soil-moisture-gauge-container">
+    <div className="light-sensor-gauge-container">
       {/* Title above gauge */}
       <div style={{ 
         marginBottom: '0.5rem',
@@ -31,10 +46,10 @@ const SoilMoistureGauge = ({ moisture = 0, status = 'Disconnected', lastUpdate =
         fontWeight: '600',
         color: '#495057'
       }}>
-        Soil Moisture
+        Light Sensor
       </div>
       
-      <svg className="soil-moisture-gauge-svg" viewBox="0 0 200 120">
+      <svg className="light-sensor-gauge-svg" viewBox="0 0 200 120">
         {/* Gauge background arc */}
         <path
           d="M 20 100 A 80 80 0 0 1 180 100"
@@ -82,15 +97,25 @@ const SoilMoistureGauge = ({ moisture = 0, status = 'Disconnected', lastUpdate =
         />
       </svg>
 
-      {/* Percentage below gauge */}
+      {/* Light level value below gauge */}
       <div style={{ 
         marginTop: '0.5rem',
-        marginBottom: '0.75rem',
+        marginBottom: '0.25rem',
         fontSize: '1.5rem',
         fontWeight: 'bold',
         color: '#212529'
       }}>
         {Math.round(value)}%
+      </div>
+
+      {/* Light level description */}
+      <div style={{ 
+        marginBottom: '0.75rem',
+        fontSize: '0.9rem',
+        fontWeight: '500',
+        color: getGaugeColor(value)
+      }}>
+        {getLightDescription(value)}
       </div>
 
       {/* Status section */}
@@ -111,4 +136,4 @@ const SoilMoistureGauge = ({ moisture = 0, status = 'Disconnected', lastUpdate =
   );
 };
 
-export default SoilMoistureGauge;
+export default LightSensorGauge;
