@@ -1,0 +1,21 @@
+.soil-moisture-gauge-container {
+  width: 220px;
+  text-align: center;
+  margin: 0 auto;
+}
+
+.soil-moisture-gauge-svg {
+  display: block;
+  margin: 0 auto;
+}
+
+.soil-moisture-gauge-label {
+  font-size: 16px;
+  fill: #666;
+}
+
+.soil-moisture-gauge-value {
+  font-size: 22px;
+  fill: #333;
+  font-weight: bold;
+}
