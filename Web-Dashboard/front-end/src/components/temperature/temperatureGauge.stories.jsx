@@ -2,16 +2,42 @@ import React from 'react';
 import TemperatureGauge from './temperatureGauge';
 
 export default {
-  title: 'Components/TemperatureGauge',
+  title: 'Sensors/Temperature',
   component: TemperatureGauge,
   parameters: {
     layout: 'centered',
     docs: {
       description: {
-        component: 'A responsive temperature gauge that displays temperature readings with color-coded indicators and status information.',
+        component: `
+# Temperature Gauge Component
+
+A responsive temperature gauge that displays temperature readings with color-coded indicators and status information. This component provides visual feedback for temperature monitoring in intelligent greenhouse systems.
+
+## Features
+
+- **Visual Gauge**: Half-circle SVG gauge with smooth animations
+- **Color-coded Levels**: Intuitive color mapping for different temperature ranges
+- **Status Indicators**: Connection status with visual feedback
+- **Responsive Design**: Adapts to different screen sizes
+- **Configurable Range**: Customizable min/max temperature values
+- **Precision Display**: Shows temperature with decimal precision
+
+## Temperature Level Ranges
+
+- **Cold** (-10°C to 10°C): Blue - Heating may be needed
+- **Cool** (10°C to 20°C): Light blue - Acceptable for cool-season crops
+- **Optimal** (20°C to 30°C): Green - Ideal for most plants
+- **Warm** (30°C to 40°C): Orange - Ventilation recommended
+- **Hot** (40°C to 50°C): Red - Cooling required
+
+## Usage
+
+Perfect for greenhouse climate control systems, agricultural monitoring, and environmental management where precise temperature tracking is essential for plant health and growth optimization.
+        `,
       },
     },
   },
+  tags: ['autodocs'],
   argTypes: {
     temperature: {
       control: { type: 'range', min: -10, max: 50, step: 0.1 },

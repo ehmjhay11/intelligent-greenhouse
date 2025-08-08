@@ -1,22 +1,119 @@
 .soil-moisture-gauge-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  max-width: 280px;
-  min-width: 200px;
+  max-width: 320px;
+  min-width: 220px;
+  height: 100%;
+  min-height: 280px;
   text-align: center;
-  margin: 0 auto;
-  padding: 1rem;
+  padding: 1.5rem;
   box-sizing: border-box;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 50%, #ce93d8 100%);
+  border-radius: 18px;
+  box-shadow: 
+    0 8px 32px rgba(156, 39, 176, 0.15);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   z-index: 1;
+  border: none;
+  margin: 0 auto;
+}
+
+.soil-moisture-gauge-title {
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #4a148c;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  text-shadow: 0 2px 4px rgba(156, 39, 176, 0.3);
+  letter-spacing: 0.5px;
+  animation: soil-pulse 2s ease-in-out infinite;
+}
+
+.soil-moisture-gauge-svg {
+  display: block;
+  margin: 0 auto;
+  width: 100%;
+  height: auto;
+  max-width: 180px;
+  overflow: visible;
+  shape-rendering: geometricPrecision;
+}
+
+.soil-moisture-gauge-value {
+  margin: 1rem 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #000000;
+}
+
+.soil-moisture-status-section {
+  margin-top: 0.5rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.soil-moisture-status-indicator {
+  font-weight: 500;
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+
+.soil-moisture-status-text {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.soil-moisture-gauge-container::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  background: linear-gradient(45deg, #8e24aa, #7b1fa2, #6a1b9a, #4a148c);
+  border-radius: 19px;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.soil-moisture-gauge-container::after {
+  content: '🌱';
+  position: absolute;
+  top: 12px;
+  right: 18px;
+  font-size: 1.3rem;
+  opacity: 0.7;
+  animation: grow 3s ease-in-out infinite;
+}
+
+@keyframes grow {
+  0%, 100% { transform: scale(1) rotate(-5deg); opacity: 0.7; }
+  50% { transform: scale(1.1) rotate(5deg); opacity: 0.9; }
+}
+
+@keyframes soil-pulse {
+  0%, 100% { 
+    transform: scale(1); 
+    text-shadow: 0 2px 4px rgba(156, 39, 176, 0.3);
+  }
+  50% { 
+    transform: scale(1.05); 
+    text-shadow: 0 3px 8px rgba(156, 39, 176, 0.5);
+  }
 }
 
 .soil-moisture-gauge-container:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 
+    0 12px 40px rgba(156, 39, 176, 0.25);
+}
+
+.soil-moisture-gauge-container:hover::before {
+  opacity: 0.6;
 }
 
 .soil-moisture-gauge-svg {
@@ -31,14 +128,14 @@
 
 .soil-moisture-gauge-label {
   font-size: clamp(12px, 2.5vw, 16px);
-  fill: #495057;
+  fill: #4a148c;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .soil-moisture-gauge-value {
   font-size: clamp(18px, 4vw, 24px);
-  fill: #212529;
+  fill: #000000;
   font-weight: bold;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   pointer-events: none;
@@ -58,14 +155,14 @@
   transition: stroke 0.3s ease;
 }
 
-/* New: Status Section */
+/* Status Section */
 .status-section {
   margin-top: 0.75rem;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .status-section .status-indicator {
-  color: #28a745; /* green dot */
+  color: #4a148c;
   font-weight: 600;
   font-size: 0.95rem;
   display: flex;
@@ -76,37 +173,41 @@
 
 .status-section .status-text {
   font-size: 0.85rem;
-  color: #666;
+  color: #7b1fa2;
   line-height: 1.4;
 }
 
 /* Responsive Breakpoints */
 @media (max-width: 768px) {
   .soil-moisture-gauge-container {
-    max-width: 240px;
-    padding: 0.75rem;
+    max-width: 280px;
+    padding: 1.25rem;
+  }
+
+  .soil-moisture-gauge-svg {
+    max-width: 180px;
   }
 }
 
 @media (max-width: 480px) {
   .soil-moisture-gauge-container {
-    max-width: 200px;
-    padding: 0.5rem;
+    max-width: 240px;
+    padding: 1rem;
   }
 
   .soil-moisture-gauge-svg {
-    max-width: 180px;
+    max-width: 160px;
   }
 }
 
 @media (max-width: 320px) {
   .soil-moisture-gauge-container {
-    max-width: 180px;
-    padding: 0.25rem;
+    max-width: 200px;
+    padding: 0.75rem;
   }
 
   .soil-moisture-gauge-svg {
-    max-width: 160px;
+    max-width: 140px;
   }
 }
 

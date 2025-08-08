@@ -39,15 +39,58 @@ const LightSensorGauge = ({
 
   return (
     <div className="light-sensor-gauge-container">
+      {/* Light-themed decorative elements */}
+      {lightLevel > 70 && (
+        <div style={{
+          position: 'absolute',
+          top: '15px',
+          left: '15px',
+          fontSize: '0.7rem',
+          opacity: 0.6,
+          animation: 'sparkle 2s ease-in-out infinite'
+        }}>✨</div>
+      )}
+      {lightLevel > 50 && (
+        <div style={{
+          position: 'absolute',
+          bottom: '25px',
+          left: '20px',
+          fontSize: '0.6rem',
+          opacity: 0.5,
+          animation: 'twinkle 3s ease-in-out infinite 0.5s'
+        }}>⭐</div>
+      )}
+      {lightLevel < 20 && (
+        <div style={{
+          position: 'absolute',
+          bottom: '30px',
+          right: '25px',
+          fontSize: '0.8rem',
+          opacity: 0.7,
+          animation: 'dim 4s ease-in-out infinite'
+        }}>🌙</div>
+      )}
+      
       {/* Title above gauge */}
-      <div style={{ 
-        marginBottom: '0.5rem',
-        fontSize: '1.1rem',
-        fontWeight: '600',
-        color: '#495057'
-      }}>
-        Light Sensor
+      <div className="light-sensor-gauge-title">
+        ☀️ Light Sensor
       </div>
+      
+      {/* Add light-themed animations */}
+      <style>{`
+        @keyframes sparkle {
+          0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.6; }
+          50% { transform: scale(1.3) rotate(180deg); opacity: 1; }
+        }
+        @keyframes twinkle {
+          0%, 100% { opacity: 0.5; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.2); }
+        }
+        @keyframes dim {
+          0%, 100% { opacity: 0.7; transform: translateY(0px); }
+          50% { opacity: 0.3; transform: translateY(-2px); }
+        }
+      `}</style>
       
       <svg className="light-sensor-gauge-svg" viewBox="0 0 200 120">
         {/* Gauge background arc */}
@@ -98,37 +141,26 @@ const LightSensorGauge = ({
       </svg>
 
       {/* Light level value below gauge */}
-      <div style={{ 
-        marginTop: '0.5rem',
-        marginBottom: '0.25rem',
-        fontSize: '1.5rem',
-        fontWeight: 'bold',
-        color: '#212529'
-      }}>
+      <div className="light-sensor-gauge-value">
         {Math.round(value)}%
       </div>
 
       {/* Light level description */}
-      <div style={{ 
-        marginBottom: '0.75rem',
-        fontSize: '0.9rem',
-        fontWeight: '500',
-        color: getGaugeColor(value)
-      }}>
+      <div className="light-sensor-gauge-description" style={{ color: getGaugeColor(value) }}>
         {getLightDescription(value)}
       </div>
 
       {/* Status section */}
-      <div className="status-section">
+      <div className="light-sensor-status-section">
         <div
-          className="status-indicator"
+          className="light-sensor-status-indicator"
           style={{ 
             color: status === 'Connected' || status === 'connected' ? '#28a745' : '#dc3545' 
           }}
         >
           ● {status}
         </div>
-        <div className="status-text">
+        <div className="light-sensor-status-text">
           Last update: {lastUpdate}
         </div>
       </div>

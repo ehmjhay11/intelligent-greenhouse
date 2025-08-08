@@ -24,15 +24,56 @@ const SoilMoistureGauge = ({ moisture = 0, status = 'Disconnected', lastUpdate =
 
   return (
     <div className="soil-moisture-gauge-container">
+      {/* Nature-themed decorative elements */}
+      <div style={{
+        position: 'absolute',
+        top: '15px',
+        left: '15px',
+        fontSize: '0.7rem',
+        opacity: 0.4,
+        animation: 'sway 4s ease-in-out infinite'
+      }}>🌿</div>
+      {moisture > 60 && (
+        <div style={{
+          position: 'absolute',
+          bottom: '25px',
+          left: '20px',
+          fontSize: '0.6rem',
+          opacity: 0.5,
+          animation: 'bloom 3s ease-in-out infinite 1s'
+        }}>🌸</div>
+      )}
+      {moisture < 30 && (
+        <div style={{
+          position: 'absolute',
+          bottom: '30px',
+          right: '25px',
+          fontSize: '0.7rem',
+          opacity: 0.6,
+          animation: 'wilt 2s ease-in-out infinite'
+        }}>🥀</div>
+      )}
+      
       {/* Title above gauge */}
-      <div style={{ 
-        marginBottom: '0.5rem',
-        fontSize: '1.1rem',
-        fontWeight: '600',
-        color: '#495057'
-      }}>
-        Soil Moisture
+      <div className="soil-moisture-gauge-title">
+        🌱 Soil Moisture
       </div>
+      
+      {/* Add nature animations */}
+      <style>{`
+        @keyframes sway {
+          0%, 100% { transform: rotate(-3deg); opacity: 0.4; }
+          50% { transform: rotate(3deg); opacity: 0.7; }
+        }
+        @keyframes bloom {
+          0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.5; }
+          50% { transform: scale(1.2) rotate(10deg); opacity: 0.8; }
+        }
+        @keyframes wilt {
+          0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.6; }
+          50% { transform: translateY(2px) rotate(-10deg); opacity: 0.3; }
+        }
+      `}</style>
       
       <svg className="soil-moisture-gauge-svg" viewBox="0 0 200 120">
         {/* Gauge background arc */}
@@ -83,27 +124,21 @@ const SoilMoistureGauge = ({ moisture = 0, status = 'Disconnected', lastUpdate =
       </svg>
 
       {/* Percentage below gauge */}
-      <div style={{ 
-        marginTop: '0.5rem',
-        marginBottom: '0.75rem',
-        fontSize: '1.5rem',
-        fontWeight: 'bold',
-        color: '#212529'
-      }}>
+      <div className="soil-moisture-gauge-value">
         {Math.round(value)}%
       </div>
 
       {/* Status section */}
-      <div className="status-section">
+      <div className="soil-moisture-status-section">
         <div
-          className="status-indicator"
+          className="soil-moisture-status-indicator"
           style={{ 
             color: status === 'Connected' || status === 'connected' ? '#28a745' : '#dc3545' 
           }}
         >
           ● {status}
         </div>
-        <div className="status-text">
+        <div className="soil-moisture-status-text">
           Last update: {lastUpdate}
         </div>
       </div>

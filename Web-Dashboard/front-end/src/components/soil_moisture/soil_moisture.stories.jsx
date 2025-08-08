@@ -2,16 +2,41 @@ import React from 'react';
 import SoilMoistureGauge from './soil_moisture';
 
 export default {
-  title: 'Components/SoilMoistureGauge',
+  title: 'Sensors/SoilMoisture',
   component: SoilMoistureGauge,
   parameters: {
     layout: 'centered',
     docs: {
       description: {
-        component: 'A responsive soil moisture gauge that displays moisture levels from 0-100% with color-coded indicators and status information.',
+        component: `
+# Soil Moisture Gauge Component
+
+A responsive soil moisture gauge that displays moisture levels from 0-100% with color-coded indicators and status information. This component provides visual feedback for soil moisture monitoring in intelligent greenhouse systems.
+
+## Features
+
+- **Visual Gauge**: Half-circle SVG gauge with smooth animations
+- **Color-coded Levels**: Intuitive color mapping for different moisture ranges
+- **Status Indicators**: Connection status with visual feedback
+- **Responsive Design**: Adapts to different screen sizes
+- **Accessibility**: Screen reader friendly with proper ARIA labels
+
+## Moisture Level Ranges
+
+- **Critical (0-20%)**: Red - Immediate irrigation needed
+- **Low (21-40%)**: Orange - Watering recommended
+- **Optimal (41-70%)**: Green - Ideal moisture levels
+- **High (71-85%)**: Blue - Good moisture, monitor drainage
+- **Saturated (86-100%)**: Purple - Potential overwatering
+
+## Usage
+
+Perfect for greenhouse automation systems, agricultural monitoring, and plant care applications where precise soil moisture tracking is essential.
+        `,
       },
     },
   },
+  tags: ['autodocs'],
   argTypes: {
     moisture: {
       control: { type: 'range', min: 0, max: 100, step: 1 },

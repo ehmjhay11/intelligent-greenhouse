@@ -37,15 +37,44 @@ const TemperatureGauge = ({
 
   return (
     <div className="temperature-gauge-container">
+      {/* Thermal effects based on temperature */}
+      {clampedTemp > 30 && (
+        <div style={{
+          position: 'absolute',
+          top: '15px',
+          left: '15px',
+          fontSize: '0.7rem',
+          opacity: 0.5,
+          animation: 'heat-wave 1.5s ease-in-out infinite'
+        }}>🔥</div>
+      )}
+      {clampedTemp < 10 && (
+        <div style={{
+          position: 'absolute',
+          bottom: '25px',
+          left: '20px',
+          fontSize: '0.8rem',
+          opacity: 0.6,
+          animation: 'freeze 2s ease-in-out infinite'
+        }}>❄️</div>
+      )}
+      
       {/* Title above gauge */}
-      <div style={{ 
-        marginBottom: '0.5rem',
-        fontSize: '1.1rem',
-        fontWeight: '600',
-        color: '#495057'
-      }}>
-        Temperature
+      <div className="temperature-gauge-title">
+        🌡️ Temperature
       </div>
+      
+      {/* Add heat wave and freeze animations */}
+      <style>{`
+        @keyframes heat-wave {
+          0%, 100% { transform: translateY(0px) scale(1); opacity: 0.5; }
+          50% { transform: translateY(-2px) scale(1.1); opacity: 0.8; }
+        }
+        @keyframes freeze {
+          0%, 100% { transform: translateX(0px) scale(1); opacity: 0.6; }
+          50% { transform: translateX(-1px) scale(1.05); opacity: 0.9; }
+        }
+      `}</style>
       
       <svg className="temperature-gauge-svg" viewBox="0 0 200 120">
         {/* Gauge background arc */}
@@ -96,27 +125,21 @@ const TemperatureGauge = ({
       </svg>
 
       {/* Temperature value below gauge */}
-      <div style={{ 
-        marginTop: '0.5rem',
-        marginBottom: '0.75rem',
-        fontSize: '1.5rem',
-        fontWeight: 'bold',
-        color: '#212529'
-      }}>
+      <div className="temperature-gauge-value">
         {Math.round(clampedTemp * 10) / 10}°C
       </div>
 
       {/* Status section */}
-      <div className="status-section">
+      <div className="temperature-status-section">
         <div
-          className="status-indicator"
+          className="temperature-status-indicator"
           style={{ 
             color: status === 'Connected' || status === 'connected' ? '#28a745' : '#dc3545' 
           }}
         >
           ● {status}
         </div>
-        <div className="status-text">
+        <div className="temperature-status-text">
           Last update: {lastUpdate}
         </div>
       </div>

@@ -1,0 +1,223 @@
+.humidity-sensor-gauge-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 320px;
+  min-width: 220px;
+  height: 100%;
+  min-height: 280px;
+  text-align: center;
+  padding: 1.5rem;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 50%, #90caf9 100%);
+  border-radius: 18px;
+  box-shadow: 
+    0 8px 32px rgba(33, 150, 243, 0.15);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  z-index: 1;
+  border: none;
+  margin: 0 auto;
+}
+
+.humidity-sensor-gauge-container::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  background: linear-gradient(45deg, #64b5f6, #42a5f5, #2196f3, #1976d2);
+  border-radius: 21px;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.humidity-sensor-gauge-container::after {
+  content: '💧';
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 1.2rem;
+  opacity: 0.6;
+  animation: droplet 3s ease-in-out infinite;
+}
+
+@keyframes droplet {
+  0%, 100% { transform: translateY(0px) scale(1); opacity: 0.6; }
+  50% { transform: translateY(-3px) scale(1.1); opacity: 0.8; }
+}
+
+@keyframes humidity-pulse {
+  0%, 100% { 
+    transform: scale(1); 
+    text-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+  }
+  50% { 
+    transform: scale(1.05); 
+    text-shadow: 0 3px 8px rgba(33, 150, 243, 0.5);
+  }
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.humidity-sensor-gauge-container:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 
+    0 12px 40px rgba(33, 150, 243, 0.25);
+}
+
+.humidity-sensor-gauge-container:hover::before {
+  opacity: 0.6;
+}
+
+.humidity-sensor-gauge-title {
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0d47a1;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  text-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+  letter-spacing: 0.5px;
+  animation: humidity-pulse 2s ease-in-out infinite;
+}
+
+.humidity-sensor-gauge-svg {
+  display: block;
+  margin: 0 auto;
+  width: 100%;
+  height: auto;
+  max-width: 200px;
+  overflow: visible;
+  shape-rendering: geometricPrecision;
+}
+
+.humidity-sensor-gauge-label {
+  font-size: clamp(12px, 2.5vw, 16px);
+  fill: #0d47a1;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-weight: 600;
+}
+
+.humidity-sensor-gauge-value {
+  margin: 0.5rem 0 0.25rem 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #000000;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1;
+}
+
+.humidity-sensor-gauge-level {
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-size: clamp(14px, 3vw, 18px);
+  font-weight: 600;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.humidity-sensor-gauge-arc {
+  transition: stroke-dashoffset 0.5s ease, stroke 0.3s ease;
+}
+
+.humidity-sensor-gauge-needle {
+  transition: transform 0.5s ease;
+}
+
+.humidity-sensor-status-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: center;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.humidity-sensor-status-indicator {
+  font-size: clamp(12px, 2.5vw, 14px);
+  font-weight: 600;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #0d47a1;
+}
+
+.humidity-sensor-status-text {
+  font-size: clamp(10px, 2vw, 12px);
+  color: #1976d2;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-style: italic;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .humidity-sensor-gauge-container {
+    max-width: 280px;
+    padding: 1.25rem;
+  }
+  
+  .humidity-sensor-gauge-svg {
+    max-width: 180px;
+  }
+}
+
+@media (max-width: 480px) {
+  .humidity-sensor-gauge-container {
+    max-width: 240px;
+    padding: 1rem;
+  }
+  
+  .humidity-sensor-gauge-svg {
+    max-width: 160px;
+  }
+}
+
+@media (max-width: 320px) {
+  .humidity-sensor-gauge-container {
+    max-width: 200px;
+    padding: 0.75rem;
+  }
+
+  .humidity-sensor-gauge-svg {
+    max-width: 140px;
+  }
+}
+
+/* Animation for connecting states */
+.humidity-sensor-gauge-container[data-status="connecting"] .humidity-sensor-status-indicator,
+.humidity-sensor-gauge-container[data-status="reconnecting"] .humidity-sensor-status-indicator {
+  animation: pulse 1.5s infinite;
+}
+
+/* Color variations for different humidity levels */
+.humidity-sensor-gauge-container[data-level="too-dry"] {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+}
+
+.humidity-sensor-gauge-container[data-level="dry"] {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffcc02 100%);
+}
+
+.humidity-sensor-gauge-container[data-level="optimal"] {
+  background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+}
+
+.humidity-sensor-gauge-container[data-level="humid"] {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+}
+
+.humidity-sensor-gauge-container[data-level="very-humid"] {
+  background: linear-gradient(135deg, #ede7f6 0%, #d1c4e9 100%);
+}
