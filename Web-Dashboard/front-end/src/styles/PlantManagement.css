@@ -1,0 +1,348 @@
+/* Plant Management Specific Styles */
+
+.plant-card {
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  padding: 1.5rem;
+  background: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.plant-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.plant-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.plant-name {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.plant-stage {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.plant-description {
+  margin: 0 0 1rem 0;
+  color: #6c757d;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.thresholds-display {
+  font-size: 0.8rem;
+  color: #495057;
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+.thresholds-display strong {
+  color: #2c3e50;
+}
+
+.threshold-editor {
+  border: 2px solid #f39c12;
+  border-radius: 8px;
+  padding: 1.5rem;
+  background-color: #fffbf0;
+  margin-top: 1rem;
+}
+
+.threshold-editor h4 {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
+}
+
+.threshold-group {
+  margin-bottom: 1.5rem;
+}
+
+.threshold-group h5 {
+  margin: 0 0 0.75rem 0;
+  color: #495057;
+  font-size: 1rem;
+  text-transform: capitalize;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.threshold-inputs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+.threshold-input-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.threshold-input-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6c757d;
+  margin-bottom: 0.25rem;
+}
+
+.threshold-input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  transition: border-color 0.15s ease;
+}
+
+.threshold-input:focus {
+  outline: none;
+  border-color: #f39c12;
+  box-shadow: 0 0 0 0.2rem rgba(243, 156, 18, 0.25);
+}
+
+.threshold-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  justify-content: flex-end;
+}
+
+.device-assignment-card {
+  border: 2px solid #3498db;
+  border-radius: 12px;
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  transition: transform 0.2s ease;
+}
+
+.device-assignment-card:hover {
+  transform: translateY(-1px);
+}
+
+.device-name {
+  margin: 0 0 0.5rem 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.device-location {
+  margin: 0 0 1rem 0;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.assignment-status {
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.assignment-active {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+.assignment-inactive {
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+}
+
+.assignment-select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.assignment-select:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+}
+
+.plant-form {
+  margin-bottom: 2rem;
+  padding: 2rem;
+  border: 2px solid #27ae60;
+  border-radius: 12px;
+  background-color: #f8fff9;
+}
+
+.plant-form h3 {
+  margin: 0 0 1.5rem 0;
+  color: #2c3e50;
+  font-size: 1.3rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.plant-type-icons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.plant-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.assignment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.threshold-value-critical {
+  color: #dc3545;
+  font-weight: 600;
+}
+
+.threshold-value-warning {
+  color: #ffc107;
+  font-weight: 600;
+}
+
+.threshold-value-good {
+  color: #28a745;
+  font-weight: 600;
+}
+
+.plant-stats {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.plant-stat {
+  background-color: #e9ecef;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  color: #495057;
+  border: 1px solid #ced4da;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .plant-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .assignment-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .threshold-inputs {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .action-buttons {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .action-buttons .btn {
+    flex: 1;
+    min-width: 150px;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .threshold-actions {
+    justify-content: stretch;
+  }
+  
+  .threshold-actions .btn {
+    flex: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .plant-form {
+    padding: 1rem;
+  }
+  
+  .plant-card {
+    padding: 1rem;
+  }
+  
+  .device-assignment-card {
+    padding: 1rem;
+  }
+  
+  .threshold-inputs {
+    grid-template-columns: 1fr;
+  }
+  
+  .plant-stats {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .plant-stat {
+    text-align: center;
+  }
+}
