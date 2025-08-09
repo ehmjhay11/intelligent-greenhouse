@@ -25,7 +25,7 @@ The **TemperatureLive** component provides real-time temperature monitoring thro
 
 ## MQTT Configuration
 
-- **Broker**: ws://192.168.1.6:8080/mqtt
+- **Broker**: ws://10.146.132.213:8080/mqtt
 - **Topic**: esp32
 - **Data Formats Supported**:
   - \`temperature\`: Direct celsius value
@@ -333,7 +333,7 @@ export const Default = {
 This is the main live component that connects to the MQTT broker and displays real-time temperature data from ESP32 sensors.
 
 **Connection Details:**
-- Broker: \`ws://192.168.1.6:8080/mqtt\`
+- Broker: \`ws://10.146.132.213:8080/mqtt\`
 - Topic: \`esp32\`
 - Client ID: Auto-generated unique ID
 - Temperature Range: -10°C to 50°C

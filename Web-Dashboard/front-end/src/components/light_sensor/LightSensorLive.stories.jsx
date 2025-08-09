@@ -24,7 +24,7 @@ The **LightSensorLive** component provides real-time light level monitoring thro
 
 ## MQTT Configuration
 
-- **Broker**: ws://192.168.1.6:8080/mqtt
+- **Broker**: ws://10.146.132.213:8080/mqtt
 - **Topic**: esp32
 - **Data Formats Supported**:
   - \`light_level\`: Direct percentage (0-100)
@@ -78,7 +78,7 @@ export const Default = {
 This is the main live component that connects to the MQTT broker and displays real-time light level data from ESP32 sensors.
 
 **Connection Details:**
-- Broker: \`ws://192.168.1.6:8080/mqtt\`
+- Broker: \`ws://192.168.0.175:8080/mqtt\`
 - Topic: \`esp32\`
 - Client ID: Auto-generated unique ID
 
@@ -217,7 +217,7 @@ export const TroubleshootingGuide = {
             <div style={{ padding: '1rem', backgroundColor: '#fff3cd', borderRadius: '4px', border: '1px solid #ffeaa7' }}>
               <strong style={{ color: '#856404' }}>Issue: Shows "Disconnected" status</strong>
               <ul style={{ margin: '0.5rem 0 0 1rem', color: '#6c757d' }}>
-                <li>Check if MQTT broker is running on 192.168.1.6:8080</li>
+                <li>Check if MQTT broker is running on 192.168.0.175:8080</li>
                 <li>Verify network connectivity to the broker</li>
                 <li>Ensure WebSocket support is enabled on the broker</li>
                 <li>Check browser console for connection errors</li>
@@ -250,7 +250,7 @@ export const TroubleshootingGuide = {
           <h4 style={{ color: '#666', marginBottom: '0.5rem' }}>Configuration Checklist:</h4>
           <div style={{ padding: '1rem', backgroundColor: '#d4edda', borderRadius: '4px', border: '1px solid #c3e6cb' }}>
             <ul style={{ margin: 0, color: '#155724' }}>
-              <li>✓ MQTT broker accessible at ws://192.168.1.6:8080/mqtt</li>
+              <li>✓ MQTT broker accessible at ws://192.168.0.175:8080/mqtt</li>
               <li>✓ ESP32 publishing to 'esp32' topic</li>
               <li>✓ Light sensor data in supported format</li>
               <li>✓ Network connectivity between components</li>

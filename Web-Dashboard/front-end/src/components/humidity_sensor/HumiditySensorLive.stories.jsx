@@ -24,7 +24,7 @@ The **HumiditySensorLive** component provides real-time humidity monitoring thro
 
 ## MQTT Configuration
 
-- **Broker**: ws://192.168.1.6:8080/mqtt
+- **Broker**: ws://10.146.132.213:8080/mqtt
 - **Topic**: esp32
 - **Data Formats Supported**:
   - \`humidity\`: Direct percentage (0-100)
@@ -80,7 +80,7 @@ export const Default = {
 This is the main live component that connects to the MQTT broker and displays real-time humidity data from ESP32 sensors.
 
 **Connection Details:**
-- Broker: \`ws://192.168.1.6:8080/mqtt\`
+- Broker: \`ws://192.168.0.175:8080/mqtt\`
 - Topic: \`esp32\`
 - Client ID: Auto-generated unique ID
 

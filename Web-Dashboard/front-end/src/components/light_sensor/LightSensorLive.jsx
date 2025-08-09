@@ -5,7 +5,7 @@ import mqtt from 'mqtt';
 
 // Configuration - with proper fallbacks for browser environment
 const MQTT_CONFIG = {
-  broker: (typeof process !== 'undefined' && process.env?.REACT_APP_MQTT_BROKER) || 'ws://192.168.1.6:8080/mqtt',
+  broker: (typeof process !== 'undefined' && process.env?.REACT_APP_MQTT_BROKER) || 'ws://10.146.132.213:8080/mqtt',
   topic: (typeof process !== 'undefined' && process.env?.REACT_APP_MQTT_TOPIC) || 'esp32',
   reconnectPeriod: 1000,
   connectTimeout: 30 * 1000,
