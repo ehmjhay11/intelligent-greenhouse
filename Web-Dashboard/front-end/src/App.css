@@ -1,63 +1,110 @@
 .App {
   text-align: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #a8e063 0%, #56ab2f 100%);
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 2vw;
+  padding: clamp(1rem, 4vw, 2rem);
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .App-header {
-  background: rgba(255, 255, 255, 0.85);
-  padding: 5vw 4vw;
+  background: white;
+  padding: clamp(2rem, 8vw, 4rem) clamp(1.5rem, 6vw, 3rem);
   border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(34, 49, 63, 0.15);
-  max-width: 90vw;
+  box-shadow: 
+    0 4px 6px rgba(0, 0, 0, 0.05),
+    0 1px 3px rgba(0, 0, 0, 0.1);
+  max-width: min(90vw, 600px);
   width: 100%;
   box-sizing: border-box;
+  border: 1px solid #e2e8f0;
 }
 
 .main-title {
-  font-size: clamp(1.5rem, 6vw, 2.5rem);
-  color: #2d572c;
-  margin-bottom: 16px;
-  font-family: 'Segoe UI', Arial, sans-serif;
-  font-weight: 700;
+  font-size: clamp(1.5rem, 5vw, 2.2rem);
+  color: #0f172a;
+  margin-bottom: clamp(1rem, 3vw, 1.5rem);
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
 }
 
 .subtitle {
-  font-size: 1.25rem;
-  color: #3a3a3a;
-  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: clamp(1rem, 3vw, 1.1rem);
+  color: #475569;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 400;
+  line-height: 1.5;
+  margin-bottom: clamp(1.5rem, 4vw, 2rem);
 }
 
 .sensor-btn {
-  margin-top: 24px;
-  padding: 12px 28px;
-  background: #388e3c;
-  color: #fff;
+  padding: clamp(0.75rem, 2vw, 1rem) clamp(1.5rem, 4vw, 2rem);
+  background: #0f172a;
+  color: white;
   border: none;
-  border-radius: 6px;
-  font-size: 1.1rem;
+  border-radius: 8px;
+  font-size: clamp(0.9rem, 2.5vw, 1rem);
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  min-height: 44px;
 }
 
 .sensor-btn:hover {
-  background: #2e7d32;
+  background: #1e293b;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* Responsive adjustments for small screens */
-@media (max-width: 600px) {
+.sensor-btn:active {
+  transform: translateY(0);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .App {
+    padding: 1rem;
+  }
+  
   .App-header {
-    padding: 8vw 2vw;
+    padding: 2rem 1.5rem;
+    border-radius: 12px;
   }
-  .main-title {
-    font-size: 1.5rem;
+}
+
+@media (max-width: 480px) {
+  .App {
+    padding: 0.75rem;
   }
-  .subtitle {
-    font-size: 1rem;
+  
+  .App-header {
+    padding: 1.5rem 1rem;
+    border-radius: 8px;
+    max-width: 95vw;
+  }
+}
+
+@media (max-width: 320px) {
+  .App {
+    padding: 0.5rem;
+  }
+  
+  .App-header {
+    padding: 1.25rem 0.75rem;
+  }
+}
+
+/* Ensure touch targets are at least 44px on mobile */
+@media (max-width: 768px) {
+  .sensor-btn {
+    min-height: 48px;
+    width: 100%;
+    max-width: 280px;
   }
 }
