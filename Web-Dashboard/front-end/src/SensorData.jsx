@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import GenericSensorLive from './components/GenericSensorLive';
 
-const API_BASE = 'http://localhost:5001/api';
+const API_BASE = 'http://localhost:3003/api';
 
 function SensorData() {
   const navigate = useNavigate();

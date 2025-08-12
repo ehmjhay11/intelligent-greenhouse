@@ -10,7 +10,7 @@ const GenericSensorLive = ({ sensor }) => {
 
   const MQTT_CONFIG = {
     // Fix: Use WebSocket MQTT broker URL that matches your MQTT broker
-    broker: 'ws://10.201.52.213:8080/mqtt', // WebSocket port for web browsers
+    broker: 'ws://10.240.100.213:8080/mqtt', // WebSocket port for web browsers
     topic: sensor.mqttTopic,
     reconnectPeriod: 1000,
     connectTimeout: 30 * 1000,

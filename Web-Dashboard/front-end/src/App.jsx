@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-route
 import SensorData from './SensorData';
 import SensorManagement from './SensorManagement';
 import PlantManagement from './PlantManagement';
+import AlertsPanel from './AlertsPanel';
+import HistoricalDashboard from './HistoricalDashboard';
 
 function Home() {
   const navigate = useNavigate();
@@ -23,6 +25,12 @@ function Home() {
           <button className="sensor-btn" onClick={() => navigate('/plants')}>
             🌱 Manage Plants
           </button>
+          <button className="sensor-btn" onClick={() => navigate('/alerts')}>
+            🚨 View Alerts
+          </button>
+          <button className="sensor-btn" onClick={() => navigate('/historical')}>
+            📈 Historical Data
+          </button>
         </div>
       </header>
     </div>
@@ -37,6 +45,8 @@ function App() {
         <Route path="/sensors" element={<SensorData />} />
         <Route path="/manage-sensors" element={<SensorManagement />} />
         <Route path="/plants" element={<PlantManagement />} />
+        <Route path="/alerts" element={<AlertsPanel />} />
+        <Route path="/historical" element={<HistoricalDashboard />} />
       </Routes>
     </Router>
   );

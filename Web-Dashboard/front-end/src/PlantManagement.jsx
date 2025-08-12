@@ -41,10 +41,13 @@ const PlantManagement = () => {
 
   const fetchPlants = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/plants');
+      console.log('Fetching plants from backend...');
+      const response = await fetch('http://localhost:3003/api/plants');
       const result = await response.json();
+      console.log('Plants response:', result);
       if (result.success && result.data) {
         setPlants(result.data);
+        console.log('Plants loaded:', result.data.length, 'plants');
         // Sync devices with the latest plant data
         await syncDevicesWithPlants(result.data);
       } else {
@@ -59,25 +62,36 @@ const PlantManagement = () => {
 
   const syncDevicesWithPlants = async (currentPlants) => {
     try {
-      const response = await fetch('http://localhost:5001/api/sensors');
+      // Fetch real devices from the SensorManagement API
+      console.log('Fetching real devices from API...');
+      const response = await fetch('http://localhost:3003/api/sensors');
       const result = await response.json();
+      
       if (result.success && result.data) {
+        console.log('Real devices fetched:', result.data.length, 'devices');
+        console.log('Current plants:', currentPlants.map(p => ({ id: p._id, name: p.name, assignedDevice: p.assignedDevice })));
+        
         // Add assignedPlant field to devices based on plant assignments
         const devicesWithAssignments = result.data.map(device => {
-          // Find if any plant is assigned to this device
-          const assignedPlant = currentPlants.find(plant => plant.assignedDevice === device.id);
+          // Find if any plant is assigned to this device - convert device.id to string for comparison
+          const deviceIdStr = String(device.id);
+          const assignedPlant = currentPlants.find(plant => String(plant.assignedDevice) === deviceIdStr);
+          console.log(`Device $how{device.id} (${device.name}): assigned to plant`, assignedPlant ? assignedPlant.name : 'none');
+          console.log(`  - Checking deviceId: ${deviceIdStr} against plant assignedDevices:`, currentPlants.map(p => String(p.assignedDevice)));
           return {
             ...device,
-            assignedPlant: assignedPlant ? assignedPlant.id : null
+            assignedPlant: assignedPlant ? assignedPlant._id : null
           };
         });
+        
+        console.log('Devices with assignments:', devicesWithAssignments);
         setDevices(devicesWithAssignments);
       } else {
-        console.error('Invalid response format:', result);
+        console.warn('No devices found in SensorManagement');
         setDevices([]);
       }
     } catch (error) {
-      console.error('Error fetching devices:', error);
+      console.error('Error fetching devices from API:', error);
       setDevices([]);
     }
   };
@@ -89,10 +103,9 @@ const PlantManagement = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const url = editingPlant 
-        ? `http://localhost:5001/api/plants/${editingPlant.id}`
-        : 'http://localhost:5001/api/plants';
-      
+      const url = editingPlant
+        ? `http://localhost:3003/api/plants/${editingPlant._id}`
+        : 'http://localhost:3003/api/plants';
       const method = editingPlant ? 'PUT' : 'POST';
       
       const response = await fetch(url, {
@@ -115,7 +128,7 @@ const PlantManagement = () => {
   const handleDelete = async (plantId) => {
     if (window.confirm('Are you sure you want to delete this plant?')) {
       try {
-        const response = await fetch(`http://localhost:5001/api/plants/${plantId}`, {
+        const response = await fetch(`http://localhost:3003/api/plants/${plantId}`, {
           method: 'DELETE',
         });
 
@@ -130,31 +143,40 @@ const PlantManagement = () => {
 
   const handleAssignDevice = async (plantId, deviceId) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/plants/${plantId}/assign-device`, {
+      console.log(`🔄 Assigning device ${deviceId} to plant ${plantId}`);
+      console.log('Current plants before assignment:', plants.map(p => ({ id: p._id, name: p.name, assignedDevice: p.assignedDevice })));
+      console.log('Current devices before assignment:', devices.map(d => ({ id: d.id, name: d.name, assignedPlant: d.assignedPlant })));
+      
+      const response = await fetch(`http://localhost:3003/api/plants/${plantId}/assign-device`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ deviceId }),
+        body: JSON.stringify({ deviceId: String(deviceId) }),
       });
+
+      const result = await response.json();
+      console.log('Assignment response:', result);
 
       if (response.ok) {
         // Refresh both plants and devices to show updated assignments
+        console.log('✅ Assignment successful, refreshing data...');
         await fetchPlants();
+        console.log(`✅ Device ${deviceId} successfully assigned to plant`);
       } else {
-        const errorData = await response.json();
-        console.error('Error assigning device:', errorData);
-        alert(`Failed to assign device: ${errorData.message || 'Unknown error'}`);
+        console.error('❌ Error assigning device:', result);
+        alert(`Failed to assign device: ${result.message || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error assigning device:', error);
+      console.error('❌ Error assigning device:', error);
       alert('Failed to assign device. Please try again.');
     }
   };
 
   const handleUnassignDevice = async (plantId) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/plants/${plantId}/assign-device`, {
+      console.log(`🔄 Unassigning device from plant ${plantId}`);
+      const response = await fetch(`http://localhost:3003/api/plants/${plantId}/assign-device`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -164,51 +186,93 @@ const PlantManagement = () => {
 
       if (response.ok) {
         // Refresh both plants and devices to show updated assignments
+        console.log('✅ Unassignment successful, refreshing data...');
         await fetchPlants();
       } else {
         const errorData = await response.json();
-        console.error('Error unassigning device:', errorData);
+        console.error('❌ Error unassigning device:', errorData);
         alert(`Failed to unassign device: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error unassigning device:', error);
+      console.error('❌ Error unassigning device:', error);
       alert('Failed to unassign device. Please try again.');
     }
   };
 
-  const sendThresholdsToDevice = async (plant) => {
-    try {
-      const response = await fetch(`http://localhost:5001/api/plants/${plant.id}/send-thresholds`, {
-        method: 'POST',
-      });
+// ...existing code...
+const sendThresholdsToDevice = async (plant) => {
+  try {
+    console.log('🔄 === SENDING THRESHOLDS TO DEVICE ===');
+    console.log('📋 Plant Details:', {
+      id: plant._id,
+      name: plant.name,
+      assignedDevice: plant.assignedDevice,
+      thresholds: plant.thresholds
+    });
+    
+    const requestUrl = `http://localhost:3003/api/plants/${plant._id}/send-thresholds`;
+    console.log('📤 Request URL:', requestUrl);
+    console.log('📤 Request Method: POST');
+    console.log('🕐 Timestamp:', new Date().toISOString());
+    
+    const response = await fetch(requestUrl, {
+      method: 'POST',
+    });
 
-      if (response.ok) {
-        alert(`Thresholds sent to ${plant.name}'s device successfully!`);
-      } else {
-        alert('Failed to send thresholds to device');
-      }
-    } catch (error) {
-      console.error('Error sending thresholds:', error);
-      alert('Error sending thresholds to device');
+    console.log('📊 Response Status:', response.status, response.statusText);
+    
+    const responseData = await response.json();
+    console.log('📄 Response Data:', responseData);
+
+    if (response.ok) {
+      console.log('✅ SUCCESS: Frontend request completed successfully');
+      console.log('📡 Device ID that should receive:', plant.assignedDevice);
+      console.log('📺 Now check backend logs for MQTT publishing...');
+      alert(`✅ Thresholds sent to ${plant.name}'s device successfully!\n🔍 Check backend logs and ESP32 Serial Monitor for confirmation.`);
+    } else {
+      console.error('❌ ERROR: Failed to send thresholds');
+      console.error('❌ Error details:', responseData);
+      alert(`❌ Failed to send thresholds to device: ${responseData.message || 'Unknown error'}`);
     }
-  };
+  } catch (error) {
+    console.error('❌ NETWORK ERROR: Error sending thresholds:', error);
+    alert('❌ Network error sending thresholds to device');
+  }
+};
+// ...existing code...
 
   const sendTestCommand = async (deviceId) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/plants/test-command`, {
+      console.log('🧪 === SENDING TEST COMMAND ===');
+      console.log('📋 Device ID:', deviceId);
+      console.log('🕐 Timestamp:', new Date().toISOString());
+      
+      const requestUrl = 'http://localhost:3003/api/plants/test-command';
+      console.log('📤 Request URL:', requestUrl);
+      console.log('📤 Request Body:', { deviceId });
+      
+      const response = await fetch(requestUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ deviceId })
       });
 
+      console.log('📊 Response Status:', response.status, response.statusText);
       const result = await response.json();
+      console.log('📄 Response Data:', result);
+      
       if (result.success) {
+        console.log('✅ SUCCESS: Test command sent successfully');
+        console.log('📡 MQTT Topic:', result.topic);
+        console.log('📺 Now check ESP32 Serial Monitor for response...');
         alert('🧪 Test command sent successfully! Check ESP32 Serial Monitor for response.');
       } else {
+        console.error('❌ ERROR: Failed to send test command');
+        console.error('❌ Error details:', result);
         alert('❌ Failed to send test command: ' + result.message);
       }
     } catch (error) {
-      console.error('Error sending test command:', error);
+      console.error('❌ NETWORK ERROR: Error sending test command:', error);
       alert('❌ Error sending test command');
     }
   };
@@ -274,7 +338,9 @@ const PlantManagement = () => {
   };
 
   const getDeviceForPlant = (plantId) => {
-    return devices.find(device => device.assignedPlant === plantId);
+    const plant = plants.find(p => p._id === plantId);
+    if (!plant || !plant.assignedDevice) return null;
+    return devices.find(device => String(device.id) === String(plant.assignedDevice));
   };
 
   const getUnassignedDevices = () => {
@@ -455,10 +521,10 @@ const PlantManagement = () => {
 
       <div className="plant-grid">
         {plants.map(plant => {
-          const assignedDevice = getDeviceForPlant(plant.id);
+          const assignedDevice = getDeviceForPlant(plant._id);
           
           return (
-            <div key={plant.id} className="plant-card">
+            <div key={plant._id} className="plant-card">
               <div className="plant-header">
                 <h3 className="plant-name">
                   <span className="plant-type-icons">
@@ -520,7 +586,7 @@ const PlantManagement = () => {
                 )}
                 <button 
                   className="btn btn-danger btn-sm"
-                  onClick={() => handleDelete(plant.id)}
+                  onClick={() => handleDelete(plant._id)}
                 >
                   Delete
                 </button>
@@ -533,7 +599,7 @@ const PlantManagement = () => {
       <h3>📡 Device Assignment</h3>
       <div className="assignment-grid">
         {devices.map(device => {
-          const assignedPlant = plants.find(plant => plant.id === device.assignedPlant);
+          const assignedPlant = plants.find(plant => plant._id === device.assignedPlant);
           
           return (
             <div key={device.id} className="device-assignment-card">
@@ -559,20 +625,23 @@ const PlantManagement = () => {
                 value={device.assignedPlant || ''}
                 onChange={(e) => {
                   const selectedPlantId = e.target.value;
+                  console.log('Plant selected for device', device.id, ':', selectedPlantId);
+                  console.log('Available plants:', plants.map(p => ({ id: p._id, name: p.name })));
                   if (selectedPlantId) {
-                    handleAssignDevice(selectedPlantId, device.id);
+                    handleAssignDevice(selectedPlantId, String(device.id));
                   } else {
                     // Handle unassigning - we need to find which plant has this device and unassign it
-                    const plantWithThisDevice = plants.find(plant => plant.assignedDevice === device.id);
+                    const plantWithThisDevice = plants.find(plant => String(plant.assignedDevice) === String(device.id));
+                    console.log('Plant with this device for unassigning:', plantWithThisDevice);
                     if (plantWithThisDevice) {
-                      handleUnassignDevice(plantWithThisDevice.id);
+                      handleUnassignDevice(plantWithThisDevice._id);
                     }
                   }
                 }}
               >
                 <option value="">Select a plant...</option>
                 {plants.map(plant => (
-                  <option key={plant.id} value={plant.id}>
+                  <option key={plant._id} value={plant._id}>
                     {getPlantTypeIcon(plant.type)} {plant.name}
                   </option>
                 ))}
