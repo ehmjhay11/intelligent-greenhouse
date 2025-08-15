@@ -3,6 +3,7 @@
 #include <DHT.h>
 #include <ArduinoJson.h>
 #include <Preferences.h>
+#include <ServoESP32.h>
 
 // WiFi Configuration
 const char* ssid = "realme 10 Pro 5G";
@@ -30,12 +31,14 @@ String topic_status = "esp32_" + String(DEVICE_ID) + "/status";
 #define LDR_PIN 33
 
 // LED Configuration
-#define LED_LOW_PIN 5
-#define LED_HIGH_PIN 18
 #define SOIL_LED_PIN 19
 #define HUMIDITY_LED_PIN 21
 #define TEMP_LED_PIN 22
 #define LIGHT_LED_PIN 23
+
+// Servo Configuration
+#define SERVO_PIN 18
+Servo lightServo;
 
 // Calibration values
 const int DRY_VALUE = 4095;
@@ -97,16 +100,16 @@ void setup() {
   // Initialize pins
   pinMode(SOIL_PIN, INPUT);
   pinMode(LDR_PIN, INPUT);
-  pinMode(LED_LOW_PIN, OUTPUT);
-  pinMode(LED_HIGH_PIN, OUTPUT);
   pinMode(SOIL_LED_PIN, OUTPUT);
   pinMode(HUMIDITY_LED_PIN, OUTPUT);
   pinMode(TEMP_LED_PIN, OUTPUT);
   pinMode(LIGHT_LED_PIN, OUTPUT);
 
+  // Initialize servo
+  lightServo.attach(SERVO_PIN);
+  lightServo.write(90); // Start at center position
+
   // Turn off all LEDs initially
-  digitalWrite(LED_LOW_PIN, LOW);
-  digitalWrite(LED_HIGH_PIN, LOW);
   digitalWrite(SOIL_LED_PIN, LOW);
   digitalWrite(HUMIDITY_LED_PIN, LOW);
   digitalWrite(TEMP_LED_PIN, LOW);
@@ -536,14 +539,19 @@ int readLDR() {
   int lightPercent = map(rawValue, LDR_LIGHT, LDR_DARK, 100, 0);
   lightPercent = constrain(lightPercent, 0, 100);
 
-  // LED control based on thresholds
+  // Servo control based on thresholds
   if (lightPercent < thresholds.light.ideal_min) {
-    digitalWrite(LIGHT_LED_PIN, HIGH); // Too dark
+    // Too dark - rotate counter-clockwise (0 degrees)
+    lightServo.write(0);
+    digitalWrite(LIGHT_LED_PIN, HIGH); // Keep LED indicator for too dark
   } else if (lightPercent > thresholds.light.ideal_max) {
-    digitalWrite(LED_HIGH_PIN, HIGH); // Too bright
-  } else {
+    // Too bright - rotate clockwise (180 degrees)
+    lightServo.write(180);
     digitalWrite(LIGHT_LED_PIN, LOW);
-    digitalWrite(LED_HIGH_PIN, LOW); // Optimal
+  } else {
+    // Optimal light - stay at center position (90 degrees)
+    lightServo.write(90);
+    digitalWrite(LIGHT_LED_PIN, LOW);
   }
 
   return lightPercent;

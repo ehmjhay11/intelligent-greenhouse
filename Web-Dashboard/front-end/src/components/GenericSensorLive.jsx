@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import mqtt from 'mqtt';
-import './GenericSensorLive.css';
+import '../styles/GenericSensorLive.css';
 
 const GenericSensorLive = ({ sensor }) => {
   const [sensorValue, setSensorValue] = useState(0);
@@ -220,12 +220,6 @@ const GenericSensorLive = ({ sensor }) => {
         <span className="sensor-icon">{getIcon()}</span>
         <div className="sensor-info">
           <h3 className="sensor-name">{sensor.name}</h3>
-          <p className="sensor-device">
-            {sensor.deviceName && `📡 ${sensor.deviceName}`}
-          </p>
-          <p className="sensor-topic">
-            Topic: {sensor.mqttTopic}
-          </p>
         </div>
       </div>
 
@@ -237,23 +231,6 @@ const GenericSensorLive = ({ sensor }) => {
         <div className={`connection-status ${getStatusColorClass()}`}>
           {connectionStatus.toUpperCase()}
         </div>
-      </div>
-
-      {lastUpdate && (
-        <div className="sensor-update-info">
-          <p className="last-update">
-            Last update: {lastUpdate.toLocaleTimeString()}
-          </p>
-          <p className="device-location">
-            {sensor.deviceLocation && `📍 ${sensor.deviceLocation}`}
-          </p>
-        </div>
-      )}
-
-      <div className="value-status-container">
-        <span className={`value-status-badge ${getBadgeColorClass()}`}>
-          {getValueStatus()}
-        </span>
       </div>
     </div>
   );

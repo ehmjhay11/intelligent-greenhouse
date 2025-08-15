@@ -1,0 +1,53 @@
+/* Custom components using Tailwind CSS */
+@tailwind components;
+
+@layer components {
+  .app-container {
+    @apply min-h-screen bg-gradient-to-br from-primary-50 to-primary-200 
+           flex flex-col justify-center items-center 
+           p-4 sm:p-6 lg:p-8 font-sans;
+  }
+
+  .app-header {
+    @apply bg-white rounded-2xl shadow-lg border border-primary-200
+           w-full max-w-2xl p-8 sm:p-12 lg:p-16
+           text-center;
+  }
+
+  .main-title {
+    @apply text-2xl sm:text-3xl lg:text-4xl text-primary-900 
+           font-semibold tracking-tight leading-tight
+           mb-4 sm:mb-6;
+  }
+
+  .subtitle {
+    @apply text-base sm:text-lg text-primary-600 
+           font-normal leading-relaxed
+           mb-6 sm:mb-8;
+  }
+
+  .sensor-btn {
+    @apply px-6 sm:px-8 py-3 sm:py-4 bg-primary-900 text-white 
+           border-none rounded-lg text-sm sm:text-base font-medium 
+           cursor-pointer transition-all duration-200 ease-in-out
+           min-h-[44px] w-full sm:w-auto
+           hover:bg-primary-800 hover:-translate-y-0.5 hover:shadow-lg
+           active:translate-y-0;
+  }
+}
+
+/* Mobile-first responsive adjustments */
+@media (max-width: 320px) {
+  .app-header {
+    @apply p-4 rounded-lg;
+  }
+}
+
+/* Ensure touch targets are at least 44px on mobile */
+@media (max-width: 768px) {
+  .sensor-btn {
+    min-height: 48px;
+    width: 100%;
+    max-width: 280px;
+  }
+}

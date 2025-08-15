@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './styles/PlantManagement.css';
 
 const PlantManagement = () => {
@@ -76,7 +76,7 @@ const PlantManagement = () => {
           // Find if any plant is assigned to this device - convert device.id to string for comparison
           const deviceIdStr = String(device.id);
           const assignedPlant = currentPlants.find(plant => String(plant.assignedDevice) === deviceIdStr);
-          console.log(`Device $how{device.id} (${device.name}): assigned to plant`, assignedPlant ? assignedPlant.name : 'none');
+          console.log(`Device ${device.id} (${device.name}): assigned to plant`, assignedPlant ? assignedPlant.name : 'none');
           console.log(`  - Checking deviceId: ${deviceIdStr} against plant assignedDevices:`, currentPlants.map(p => String(p.assignedDevice)));
           return {
             ...device,
@@ -347,8 +347,124 @@ const sendThresholdsToDevice = async (plant) => {
     return devices.filter(device => !device.assignedPlant);
   };
 
+  // Normalize device labels like "ESP32 Device #X" -> "Device #X" for UI display
+  const formatDeviceLabel = (name) => {
+    if (!name) return '';
+    return name.replace(/ESP32\s*Device\s*#?(\d+)/gi, (_, num) => `Device #${num}`);
+  };
+
+  // Modal focus handling for Add New Plant (initial focus only)
+  const addNameInputRef = useRef(null);
+  const addModalRef = useRef(null);
+  useEffect(() => {
+    if (isAdding) {
+      // focus first input after next tick
+      const t = setTimeout(() => {
+        addNameInputRef.current?.focus();
+      }, 0);
+      return () => clearTimeout(t);
+    }
+  }, [isAdding]);
+
+  // Accessible Modal with focus trap, ESC close, body scroll lock, and animated close
+  const Modal = React.forwardRef(({ title, onClose, children, initialFocusRef }, ref) => {
+    const [show, setShow] = useState(false);
+    const modalRef = useRef(null);
+    const previouslyFocusedRef = useRef(null);
+
+    // expose imperative close for children (e.g., Cancel button)
+    React.useImperativeHandle(ref, () => ({
+      requestClose: () => handleRequestClose(),
+    }));
+
+    useEffect(() => {
+      previouslyFocusedRef.current = document.activeElement;
+      // Lock body scroll
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      // Trigger enter animation
+      const t = setTimeout(() => setShow(true), 0);
+
+      // Focus management
+      const focusTimer = setTimeout(() => {
+        if (initialFocusRef?.current) {
+          initialFocusRef.current.focus();
+        } else {
+          modalRef.current?.focus();
+        }
+      }, 10);
+
+      // Keydown for ESC and Tab trap
+      const onKeyDown = (e) => {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          handleRequestClose();
+        }
+        if (e.key === 'Tab') {
+          // Focus trap
+          const focusable = modalRef.current?.querySelectorAll(
+            'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+          );
+          if (!focusable || focusable.length === 0) return;
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (e.shiftKey) {
+            if (document.activeElement === first) {
+              e.preventDefault();
+              last.focus();
+            }
+          } else {
+            if (document.activeElement === last) {
+              e.preventDefault();
+              first.focus();
+            }
+          }
+        }
+      };
+      document.addEventListener('keydown', onKeyDown);
+
+      return () => {
+        clearTimeout(t);
+        clearTimeout(focusTimer);
+        document.removeEventListener('keydown', onKeyDown);
+        document.body.style.overflow = prevOverflow;
+        // Return focus
+        previouslyFocusedRef.current && previouslyFocusedRef.current.focus?.();
+      };
+    }, [initialFocusRef]);
+
+    const handleRequestClose = () => {
+      setShow(false);
+      // Match CSS transition duration (200ms)
+      setTimeout(() => onClose?.(), 200);
+    };
+
+    const onOverlayMouseDown = (e) => {
+      if (e.target === e.currentTarget) handleRequestClose();
+    };
+
+    return (
+      <div className="modal-overlay" onMouseDown={onOverlayMouseDown}>
+        <div
+          className={`modal ${show ? 'show' : ''}`}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="add-plant-title"
+          ref={modalRef}
+          tabIndex={-1}
+        >
+          <button aria-label="Close" className="modal-close" onClick={handleRequestClose}>×</button>
+          <h2 id="add-plant-title" className="modal-title">{title}</h2>
+          <div className="modal-content">
+            {children}
+          </div>
+        </div>
+      </div>
+    );
+  });
+
   return (
-    <div className="container">
+    <div className="plant-container">
       {loading && (
         <div className="loading-state">
           <p>Loading plant management system...</p>
@@ -378,7 +494,7 @@ const sendThresholdsToDevice = async (plant) => {
       {!loading && !error && (
         <>
           <div className="section-header">
-        <h2>🌱 Plant Management</h2>
+        <h1 className="main-title">🌱 Assign Plant</h1>
         <div className="action-buttons">
           <button 
             className="btn btn-primary"
@@ -402,14 +518,122 @@ const sendThresholdsToDevice = async (plant) => {
         </div>
       </div>
 
-      {(isAdding || editingPlant) && (
+      {isAdding && (
+        <Modal title="Add New Plant" onClose={resetForm} initialFocusRef={addNameInputRef} ref={addModalRef}>
+          <form onSubmit={handleSubmit} className="plant-form modal-form">
+            <div className="form-grid">
+              <div className="form-group">
+                <label htmlFor="add-plant-name">Plant Name</label>
+                <input
+                  id="add-plant-name"
+                  type="text"
+                  ref={addNameInputRef}
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  required
+                  placeholder="e.g., Cherry Tomatoes"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="add-plant-type">Plant Type</label>
+                <input
+                  id="add-plant-type"
+                  type="text"
+                  value={formData.type}
+                  onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
+                  required
+                  placeholder="e.g., tomato, lettuce, herbs"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="add-plant-stage">Growth Stage</label>
+                <select
+                  id="add-plant-stage"
+                  value={formData.stage}
+                  onChange={(e) => setFormData(prev => ({ ...prev, stage: e.target.value }))}
+                >
+                  <option value="seedling">🌱 Seedling</option>
+                  <option value="growing">🌿 Growing</option>
+                  <option value="flowering">🌸 Flowering</option>
+                  <option value="fruiting">🍇 Fruiting</option>
+                  <option value="harvesting">🌾 Harvesting</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="add-plant-description">Description</label>
+                <textarea
+                  id="add-plant-description"
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Brief description of the plant variety..."
+                  rows="3"
+                />
+              </div>
+            </div>
+
+            <div className="threshold-editor">
+              <h4>Environmental Thresholds</h4>
+              {Object.entries(formData.thresholds).map(([sensor, values]) => (
+                <div key={sensor} className="threshold-group">
+                  <h5>
+                    {sensor === 'temperature' && '🌡️'}
+                    {sensor === 'humidity' && '💧'}
+                    {sensor === 'soil_moisture' && '🌱'}
+                    {sensor === 'light' && '☀️'}
+                    {sensor.replace('_', ' ')}
+                  </h5>
+                  <div className="threshold-inputs">
+                    <div className="threshold-input-group">
+                      <label className="threshold-input-label">Min</label>
+                      <input type="number" className="threshold-input" value={values.min}
+                        onChange={(e) => updateThreshold(sensor, 'min', e.target.value)} />
+                    </div>
+                    <div className="threshold-input-group">
+                      <label className="threshold-input-label">Ideal Min</label>
+                      <input type="number" className="threshold-input" value={values.ideal_min}
+                        onChange={(e) => updateThreshold(sensor, 'ideal_min', e.target.value)} />
+                    </div>
+                    <div className="threshold-input-group">
+                      <label className="threshold-input-label">Ideal Max</label>
+                      <input type="number" className="threshold-input" value={values.ideal_max}
+                        onChange={(e) => updateThreshold(sensor, 'ideal_max', e.target.value)} />
+                    </div>
+                    <div className="threshold-input-group">
+                      <label className="threshold-input-label">Max</label>
+                      <input type="number" className="threshold-input" value={values.max}
+                        onChange={(e) => updateThreshold(sensor, 'max', e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <div className="threshold-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => addModalRef.current?.requestClose()}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-success">Create Plant</button>
+              </div>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Keep editing inline for now */}
+      {editingPlant && !isAdding && (
         <form onSubmit={handleSubmit} className="plant-form">
-          <h3>{editingPlant ? 'Edit Plant' : 'Add New Plant'}</h3>
-          
+          <h3>Edit Plant</h3>
           <div className="form-grid">
             <div className="form-group">
-              <label>Plant Name</label>
+              <label htmlFor="edit-plant-name">Plant Name</label>
               <input
+                id="edit-plant-name"
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
@@ -417,10 +641,10 @@ const sendThresholdsToDevice = async (plant) => {
                 placeholder="e.g., Cherry Tomatoes"
               />
             </div>
-
             <div className="form-group">
-              <label>Plant Type</label>
+              <label htmlFor="edit-plant-type">Plant Type</label>
               <input
+                id="edit-plant-type"
                 type="text"
                 value={formData.type}
                 onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
@@ -428,10 +652,10 @@ const sendThresholdsToDevice = async (plant) => {
                 placeholder="e.g., tomato, lettuce, herbs"
               />
             </div>
-
             <div className="form-group">
-              <label>Growth Stage</label>
+              <label htmlFor="edit-plant-stage">Growth Stage</label>
               <select
+                id="edit-plant-stage"
                 value={formData.stage}
                 onChange={(e) => setFormData(prev => ({ ...prev, stage: e.target.value }))}
               >
@@ -442,10 +666,10 @@ const sendThresholdsToDevice = async (plant) => {
                 <option value="harvesting">🌾 Harvesting</option>
               </select>
             </div>
-
             <div className="form-group">
-              <label>Description</label>
+              <label htmlFor="edit-plant-description">Description</label>
               <textarea
+                id="edit-plant-description"
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Brief description of the plant variety..."
@@ -453,10 +677,8 @@ const sendThresholdsToDevice = async (plant) => {
               />
             </div>
           </div>
-
           <div className="threshold-editor">
             <h4>Environmental Thresholds</h4>
-            
             {Object.entries(formData.thresholds).map(([sensor, values]) => (
               <div key={sensor} className="threshold-group">
                 <h5>
@@ -469,51 +691,30 @@ const sendThresholdsToDevice = async (plant) => {
                 <div className="threshold-inputs">
                   <div className="threshold-input-group">
                     <label className="threshold-input-label">Min</label>
-                    <input
-                      type="number"
-                      className="threshold-input"
-                      value={values.min}
-                      onChange={(e) => updateThreshold(sensor, 'min', e.target.value)}
-                    />
+                    <input type="number" className="threshold-input" value={values.min}
+                      onChange={(e) => updateThreshold(sensor, 'min', e.target.value)} />
                   </div>
                   <div className="threshold-input-group">
                     <label className="threshold-input-label">Ideal Min</label>
-                    <input
-                      type="number"
-                      className="threshold-input"
-                      value={values.ideal_min}
-                      onChange={(e) => updateThreshold(sensor, 'ideal_min', e.target.value)}
-                    />
+                    <input type="number" className="threshold-input" value={values.ideal_min}
+                      onChange={(e) => updateThreshold(sensor, 'ideal_min', e.target.value)} />
                   </div>
                   <div className="threshold-input-group">
                     <label className="threshold-input-label">Ideal Max</label>
-                    <input
-                      type="number"
-                      className="threshold-input"
-                      value={values.ideal_max}
-                      onChange={(e) => updateThreshold(sensor, 'ideal_max', e.target.value)}
-                    />
+                    <input type="number" className="threshold-input" value={values.ideal_max}
+                      onChange={(e) => updateThreshold(sensor, 'ideal_max', e.target.value)} />
                   </div>
                   <div className="threshold-input-group">
                     <label className="threshold-input-label">Max</label>
-                    <input
-                      type="number"
-                      className="threshold-input"
-                      value={values.max}
-                      onChange={(e) => updateThreshold(sensor, 'max', e.target.value)}
-                    />
+                    <input type="number" className="threshold-input" value={values.max}
+                      onChange={(e) => updateThreshold(sensor, 'max', e.target.value)} />
                   </div>
                 </div>
               </div>
             ))}
-            
             <div className="threshold-actions">
-              <button type="button" className="btn btn-secondary" onClick={resetForm}>
-                Cancel
-              </button>
-              <button type="submit" className="btn btn-success">
-                {editingPlant ? 'Update Plant' : 'Create Plant'}
-              </button>
+              <button type="button" className="btn btn-secondary" onClick={resetForm}>Cancel</button>
+              <button type="submit" className="btn btn-success">Update Plant</button>
             </div>
           </div>
         </form>
@@ -545,20 +746,28 @@ const sendThresholdsToDevice = async (plant) => {
               <div className="plant-stats">
                 <span className="plant-stat">Type: {plant.type}</span>
                 {assignedDevice && (
-                  <span className="plant-stat">Device: {assignedDevice.name}</span>
+                  <span className="plant-stat">Device: {formatDeviceLabel(assignedDevice.name)}</span>
                 )}
               </div>
 
-              <div className="thresholds-display">
-                <strong>🌡️ Temperature:</strong> {plant.thresholds.temperature.min}-{plant.thresholds.temperature.max}°C 
-                (Ideal: {plant.thresholds.temperature.ideal_min}-{plant.thresholds.temperature.ideal_max}°C)<br/>
-                <strong>💧 Humidity:</strong> {plant.thresholds.humidity.min}-{plant.thresholds.humidity.max}% 
-                (Ideal: {plant.thresholds.humidity.ideal_min}-{plant.thresholds.humidity.ideal_max}%)<br/>
-                <strong>🌱 Soil:</strong> {plant.thresholds.soil_moisture.min}-{plant.thresholds.soil_moisture.max}% 
-                (Ideal: {plant.thresholds.soil_moisture.ideal_min}-{plant.thresholds.soil_moisture.ideal_max}%)<br/>
-                <strong>☀️ Light:</strong> {plant.thresholds.light.min}-{plant.thresholds.light.max} 
-                (Ideal: {plant.thresholds.light.ideal_min}-{plant.thresholds.light.ideal_max})
-              </div>
+              <ul className="thresholds-display">
+                <li className="threshold-item">
+                  <strong>🌡️ Temperature:</strong> {plant.thresholds.temperature.min}-{plant.thresholds.temperature.max}°C
+                  <span className="threshold-ideal">(Ideal: {plant.thresholds.temperature.ideal_min}-{plant.thresholds.temperature.ideal_max}°C)</span>
+                </li>
+                <li className="threshold-item">
+                  <strong>💧 Humidity:</strong> {plant.thresholds.humidity.min}-{plant.thresholds.humidity.max}%
+                  <span className="threshold-ideal">(Ideal: {plant.thresholds.humidity.ideal_min}-{plant.thresholds.humidity.ideal_max}%)</span>
+                </li>
+                <li className="threshold-item">
+                  <strong>🌱 Soil:</strong> {plant.thresholds.soil_moisture.min}-{plant.thresholds.soil_moisture.max}%
+                  <span className="threshold-ideal">(Ideal: {plant.thresholds.soil_moisture.ideal_min}-{plant.thresholds.soil_moisture.ideal_max}%)</span>
+                </li>
+                <li className="threshold-item">
+                  <strong>☀️ Light:</strong> {plant.thresholds.light.min}-{plant.thresholds.light.max}
+                  <span className="threshold-ideal">(Ideal: {plant.thresholds.light.ideal_min}-{plant.thresholds.light.ideal_max})</span>
+                </li>
+              </ul>
 
               <div className="card-actions">
                 <button 
@@ -604,7 +813,7 @@ const sendThresholdsToDevice = async (plant) => {
           return (
             <div key={device.id} className="device-assignment-card">
               <h4 className="device-name">
-                📟 {device.name}
+                📟 {formatDeviceLabel(device.name)}
               </h4>
               <p className="device-location">📍 {device.location}</p>
 
@@ -640,9 +849,9 @@ const sendThresholdsToDevice = async (plant) => {
                 }}
               >
                 <option value="">Select a plant...</option>
-                {plants.map(plant => (
+        {plants.map(plant => (
                   <option key={plant._id} value={plant._id}>
-                    {getPlantTypeIcon(plant.type)} {plant.name}
+          {getPlantTypeIcon(plant.type)} {plant.name}
                   </option>
                 ))}
               </select>
@@ -651,9 +860,9 @@ const sendThresholdsToDevice = async (plant) => {
         })}
       </div>
 
-      {devices.length === 0 && !loading && (
+    {devices.length === 0 && !loading && (
         <div className="empty-state">
-          <p>No devices found. Make sure your ESP32 devices are connected and publishing data.</p>
+      <p>No devices found. Make sure your devices are connected and publishing data.</p>
         </div>
       )}
         </>

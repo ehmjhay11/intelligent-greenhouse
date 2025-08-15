@@ -1,4 +1,4 @@
-import './App.css';
+import './styles/App.css';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import SensorData from './SensorData';
 import SensorManagement from './SensorManagement';
@@ -9,13 +9,13 @@ import HistoricalDashboard from './HistoricalDashboard';
 function Home() {
   const navigate = useNavigate();
   return (
-    <div className="App">
-      <header className="App-header">
+    <div className="app-container">
+      <header className="app-header">
         <h1 className="main-title">Welcome to the Automated Greenhouse Control System</h1>
         <p className="subtitle">
           Monitor and control your greenhouse environment with ease.
         </p>
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+        <div className="flex gap-4 justify-center flex-wrap">
           <button className="sensor-btn" onClick={() => navigate('/sensors')}>
             📊 View Sensor Data
           </button>

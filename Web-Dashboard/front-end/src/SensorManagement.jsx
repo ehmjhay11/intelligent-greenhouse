@@ -46,7 +46,7 @@ function SensorManagement() {
         fetchDevices();
         setNewDevice({ name: '', location: '', ipAddress: '' });
         setShowAddForm(false);
-        alert('ESP32 device added successfully!');
+  alert('Device added successfully!');
       } else {
         alert(result.message || 'Error adding device');
       }
@@ -57,7 +57,7 @@ function SensorManagement() {
   };
 
   const deleteDevice = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this ESP32 device? This will remove all its sensors.')) return;
+  if (!window.confirm('Are you sure you want to delete this device? This will remove all its sensors.')) return;
     
     try {
       const response = await fetch(`${API_BASE}/sensors/${id}`, { 
@@ -67,7 +67,7 @@ function SensorManagement() {
       
       if (result.success) {
         fetchDevices();
-        alert('ESP32 device deleted successfully!');
+  alert('Device deleted successfully!');
       } else {
         alert(result.message || 'Error deleting device');
       }
@@ -106,11 +106,17 @@ function SensorManagement() {
     }
   };
 
+  // Normalize any label like "ESP32 Device #X" -> "Device #X" for UI display
+  const formatDeviceLabel = (name) => {
+    if (!name) return '';
+    return name.replace(/ESP32\s*Device\s*#?(\d+)/gi, (_, num) => `Device #${num}`);
+  };
+
   if (loading) return <div style={{ textAlign: 'center', padding: '2rem' }}>Loading devices...</div>;
 
   return (
     <div style={{ padding: '2rem', maxWidth: '1000px', margin: '0 auto' }}>
-      <h1 style={{ color: '#2c3e50', marginBottom: '1rem' }}>🔧 ESP32 Device Management</h1>
+  <h1 style={{ color: '#2c3e50', marginBottom: '1rem' }}>🔧 Device Management</h1>
       
       <button 
         onClick={() => setShowAddForm(!showAddForm)}
@@ -124,7 +130,7 @@ function SensorManagement() {
           marginBottom: '1rem'
         }}
       >
-        {showAddForm ? '❌ Cancel' : '➕ Add New ESP32 Device'}
+  {showAddForm ? '❌ Cancel' : '➕ Add New Device'}
       </button>
 
       {showAddForm && (
@@ -138,7 +144,7 @@ function SensorManagement() {
             backgroundColor: '#f8f9fa'
           }}
         >
-          <h3 style={{ color: '#2c3e50', marginBottom: '1rem' }}>Add New ESP32 Device</h3>
+          <h3 style={{ color: '#2c3e50', marginBottom: '1rem' }}>Add New Device</h3>
           
           <div style={{ marginBottom: '1rem' }}>
             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
@@ -148,7 +154,7 @@ function SensorManagement() {
               type="text"
               value={newDevice.name}
               onChange={(e) => setNewDevice({...newDevice, name: e.target.value})}
-              placeholder="e.g., ESP32 Device #2"
+              placeholder="e.g., Device #2"
               style={{
                 width: '100%',
                 padding: '0.5rem',
@@ -207,19 +213,19 @@ function SensorManagement() {
               cursor: 'pointer'
             }}
           >
-            ➕ Add ESP32 Device
+            ➕ Add Device
           </button>
         </form>
       )}
 
       <div>
         <h3 style={{ color: '#2c3e50', marginBottom: '1rem' }}>
-          📡 ESP32 Devices ({devices.length})
+          📡 Devices ({devices.length})
         </h3>
         
         {devices.length === 0 ? (
           <p style={{ textAlign: 'center', color: '#7f8c8d', padding: '2rem' }}>
-            No ESP32 devices found. Add your first device above!
+            No devices found. Add your first device above!
           </p>
         ) : (
           devices.map(device => (
@@ -245,7 +251,7 @@ function SensorManagement() {
               }}>
                 <div>
                   <h4 style={{ margin: '0 0 0.5rem 0', color: '#2c3e50' }}>
-                    📡 {device.name}
+                    📡 {formatDeviceLabel(device.name)}
                   </h4>
                   <p style={{ margin: '0', color: '#6c757d', fontSize: '0.9rem' }}>
                     📍 {device.location}
