@@ -537,14 +537,15 @@ const handleSensorData = async (deviceId, sensorType, value) => {
   try {
     const timestamp = new Date().toISOString();
     
-    // Always create new individual records for each sensor reading
-    // This creates proper time-series data instead of merging
-    const newRecord = {
-      deviceId: deviceId,
-      timestamp: timestamp,
-      [sensorType]: value
+    // Create sensor data record with correct format for retrieval
+    const sensorRecord = {
+      device_id: parseInt(deviceId),
+      sensor_type: sensorType,
+      value: parseFloat(value),
+      timestamp: timestamp
     };
-    sensorDataHistory.push(newRecord);
+    
+    sensorDataHistory.push(sensorRecord);
     
     // Keep only last 30 days of data (limit memory usage)
     const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
@@ -559,7 +560,7 @@ const handleSensorData = async (deviceId, sensorType, value) => {
     await checkAndCreateAlerts(deviceId, sensorType, value);
     
     // Count records for this device
-    const deviceRecords = sensorDataHistory.filter(d => d.deviceId == deviceId);
+    const deviceRecords = sensorDataHistory.filter(d => d.device_id == deviceId);
     console.log(`📊 Sensor data stored: Device ${deviceId}/${sensorType} = ${value} (${deviceRecords.length} device records, ${sensorDataHistory.length} total)`);
   } catch (error) {
     console.error('❌ Error handling sensor data:', error);
@@ -632,6 +633,48 @@ async function checkAndCreateAlerts(deviceId, sensorType, value) {
     console.error('❌ Error checking alerts:', error);
   }
 }
+
+// Get latest sensor data for a specific device and sensor type
+router.get('/latest/:deviceId/:sensorType', (req, res) => {
+  try {
+    const { deviceId, sensorType } = req.params;
+    const deviceIdNum = parseInt(deviceId);
+    
+    console.log(`📊 GET /api/sensors/latest/${deviceId}/${sensorType} - Fetching latest sensor data...`);
+    
+    // Find the most recent sensor data for this device and sensor type
+    const latestData = sensorDataHistory
+      .filter(data => data.device_id === deviceIdNum && data.sensor_type === sensorType)
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+    
+    if (latestData) {
+      console.log(`📈 Latest ${sensorType} data for device ${deviceId}: ${latestData.value}`);
+      res.json({
+        success: true,
+        data: {
+          value: latestData.value,
+          timestamp: latestData.timestamp,
+          deviceId: deviceIdNum,
+          sensorType: sensorType
+        }
+      });
+    } else {
+      console.log(`⚠️ No data found for device ${deviceId}, sensor ${sensorType}`);
+      res.json({
+        success: false,
+        message: 'No sensor data found',
+        data: null
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error fetching latest sensor data:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching latest sensor data',
+      error: error.message
+    });
+  }
+});
 
 // Export the handler function
 module.exports.handleSensorData = handleSensorData;

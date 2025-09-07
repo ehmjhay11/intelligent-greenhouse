@@ -9,7 +9,7 @@ let mqttClient = null;
 // Initialize MQTT client
 const connectMQTT = () => {
   try {
-    mqttClient = mqtt.connect('mqtt://10.240.100.213:1883');
+    mqttClient = mqtt.connect('mqtt://10.152.18.213:1883');
     
     mqttClient.on('connect', () => {
       console.log('✅ Plants MQTT client connected for command sending');
@@ -188,30 +188,20 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// Assign device to plant
+// Assign device to plant (backward compatibility: single device)
 router.post('/:id/assign-device', async (req, res) => {
   try {
     const { deviceId } = req.body;
     const plantId = req.params.id;
 
-    // If deviceId is provided, unassign it from any other plant first
+    // For new schema, push or remove from assignedDevices
+    let update;
     if (deviceId) {
-      await Plant.updateMany(
-        { 
-          assignedDevice: deviceId, 
-          isActive: true,
-          _id: { $ne: plantId }
-        },
-        { $unset: { assignedDevice: 1 } }
-      );
+      update = { $addToSet: { assignedDevices: String(deviceId) } };
+    } else {
+      update = { $set: { assignedDevices: [] } };
     }
-
-    // Update the plant
-    const plant = await Plant.findByIdAndUpdate(
-      plantId,
-      { assignedDevice: deviceId },
-      { new: true }
-    );
+    const plant = await Plant.findByIdAndUpdate(plantId, update, { new: true });
 
     if (!plant) {
       return res.status(404).json({
@@ -222,7 +212,7 @@ router.post('/:id/assign-device', async (req, res) => {
 
     res.json({
       success: true,
-      message: deviceId ? 'Device assigned successfully' : 'Device unassigned successfully',
+  message: deviceId ? 'Device assigned successfully' : 'Device(s) cleared successfully',
       data: plant
     });
   } catch (error) {
@@ -232,6 +222,30 @@ router.post('/:id/assign-device', async (req, res) => {
       message: 'Error assigning device',
       error: error.message
     });
+  }
+});
+
+// Replace full device list for a plant
+router.post('/:id/set-devices', async (req, res) => {
+  try {
+    const plantId = req.params.id;
+    const { deviceIds } = req.body; // array of strings
+    const devices = Array.isArray(deviceIds) ? deviceIds.map(String) : [];
+
+    const plant = await Plant.findByIdAndUpdate(
+      plantId,
+      { $set: { assignedDevices: devices } },
+      { new: true, runValidators: true }
+    );
+
+    if (!plant) {
+      return res.status(404).json({ success: false, message: 'Plant not found' });
+    }
+
+    res.json({ success: true, message: 'Devices updated', data: plant });
+  } catch (error) {
+    console.error('Error setting devices:', error);
+    res.status(500).json({ success: false, message: 'Error setting devices', error: error.message });
   }
 });
 
@@ -254,15 +268,23 @@ router.post('/:id/send-thresholds', async (req, res) => {
 
     console.log('📋 Found plant:', {
       name: plant.name,
-      assignedDevice: plant.assignedDevice,
+      assignedDevices: plant.assignedDevices,
       thresholds: plant.thresholds
     });
 
-    if (!plant.assignedDevice) {
-      console.error('❌ No device assigned to plant:', plant.name);
-      return res.status(400).json({
-        success: false,
-        message: 'No device assigned to this plant'
+    // Check for assigned devices (support both old assignedDevice and new assignedDevices)
+    let deviceIds = [];
+    if (plant.assignedDevices && Array.isArray(plant.assignedDevices) && plant.assignedDevices.length > 0) {
+      deviceIds = plant.assignedDevices;
+    } else if (plant.assignedDevice) {
+      deviceIds = [plant.assignedDevice];
+    }
+
+    if (deviceIds.length === 0) {
+      console.error('❌ No devices assigned to plant:', plant.name);
+      return res.status(400).json({ 
+        success: false, 
+        message: 'No devices assigned to this plant. Please assign a device first.' 
       });
     }
 
@@ -270,7 +292,7 @@ router.post('/:id/send-thresholds', async (req, res) => {
       console.error('❌ MQTT client not connected');
       return res.status(500).json({
         success: false,
-        message: 'MQTT client not connected'
+        message: 'MQTT client not connected. Please check MQTT broker connection.'
       });
     }
 
@@ -278,39 +300,64 @@ router.post('/:id/send-thresholds', async (req, res) => {
     const thresholdMessage = {
       command: 'update_thresholds',
       plant_name: plant.name,
-      device_id: plant.assignedDevice,
-      thresholds: plant.thresholds,
+      thresholds: {
+        temperature: {
+          min: plant.thresholds.temperature.ideal_min,
+          max: plant.thresholds.temperature.ideal_max
+        },
+        humidity: {
+          min: plant.thresholds.humidity.ideal_min,
+          max: plant.thresholds.humidity.ideal_max
+        },
+        soil_moisture: {
+          min: plant.thresholds.soil_moisture.ideal_min,
+          max: plant.thresholds.soil_moisture.ideal_max
+        },
+        light: {
+          min: plant.thresholds.light.ideal_min,
+          max: plant.thresholds.light.ideal_max
+        }
+      },
       timestamp: Date.now()
     };
 
-    // Use ESP32-expected topic format
-    const topic = `esp32_${plant.assignedDevice}/commands`;
-    
-    console.log('📡 Sending thresholds to ESP32 device:', plant.assignedDevice);
-    console.log('📤 Publishing to MQTT topic:', topic);
-    console.log('📋 Thresholds payload:', JSON.stringify(thresholdMessage, null, 2));
-    
-    mqttClient.publish(topic, JSON.stringify(thresholdMessage), (err) => {
-      if (err) {
-        console.error('❌ MQTT publish error:', err);
-        return res.status(500).json({
-          success: false,
-          message: 'Failed to send thresholds to device',
-          error: err.message
-        });
-      }
+    console.log('📤 Threshold message to send:', thresholdMessage);
 
-      console.log('✅ MQTT message published successfully');
-      console.log('✅ Thresholds sent to device', plant.assignedDevice, 'successfully');
+    // Publish to each assigned device
+    const publishResults = [];
+    for (const deviceId of deviceIds) {
+      const topic = `esp32_${deviceId}/commands`;
+      console.log('📡 Sending thresholds to ESP32 device:', deviceId);
+      console.log('📤 Publishing to MQTT topic:', topic);
+      console.log('📄 Message payload:', JSON.stringify(thresholdMessage));
       
-      res.json({
-        success: true,
-        message: 'Thresholds sent to device successfully',
-        deviceId: plant.assignedDevice,
-        plantName: plant.name,
-        topic: topic,
-        data: thresholdMessage
-      });
+      try {
+        await new Promise((resolve, reject) => {
+          mqttClient.publish(topic, JSON.stringify(thresholdMessage), { qos: 1 }, (err) => {
+            if (err) {
+              console.error(`❌ Failed to publish to ${topic}:`, err);
+              return reject(err);
+            }
+            console.log(`✅ Successfully published to ${topic}`);
+            resolve();
+          });
+        });
+        publishResults.push({ deviceId, topic, success: true });
+      } catch (err) {
+        console.error(`❌ Error publishing to device ${deviceId}:`, err);
+        publishResults.push({ deviceId, topic, success: false, error: err.message });
+      }
+    }
+
+    const successCount = publishResults.filter(r => r.success).length;
+    console.log(`📊 Published to ${successCount}/${publishResults.length} devices successfully`);
+
+    res.json({
+      success: successCount > 0,
+      message: `Thresholds sent to ${successCount}/${publishResults.length} devices successfully`,
+      devices: publishResults,
+      plantName: plant.name,
+      data: thresholdMessage
     });
 
   } catch (error) {

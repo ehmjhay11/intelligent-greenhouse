@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './styles/AlertsPanel.css';
+import './styles/DashboardPages.css';
 
 const AlertsPanel = () => {
   const [alerts, setAlerts] = useState([]);
@@ -56,53 +57,63 @@ const AlertsPanel = () => {
     return colors[severity] || '#6c757d';
   };
 
+  const formatTime = (d) => new Date(d).toLocaleString();
+
   return (
-    <div className="alerts-panel">
-      <div className="alerts-header">
-        <h3>🚨 Active Alerts</h3>
-        <span className="alert-count">{alerts.length}</span>
-      </div>
+    <main className="page-container" role="main">
+      <header className="page-header fade-in">
+        <h1 className="page-title">Alerts</h1>
+        <p className="page-subtitle">Active notifications with severity and timestamps.</p>
+      </header>
 
       {loading ? (
         <div className="loading">Loading alerts...</div>
       ) : (
-        <div className="alerts-list">
+        <section className="page-section">
           {alerts.length === 0 ? (
-            <div className="no-alerts">
-              ✅ All systems normal - no active alerts
-            </div>
+            <div className="card card-body text-center">✅ All systems normal - no active alerts</div>
           ) : (
-            alerts.map(alert => (
-              <div 
-                key={alert._id} 
-                className={`alert-item ${alert.severity}`}
-                style={{ borderLeftColor: getSeverityColor(alert.severity) }}
-              >
-                <div className="alert-content">
-                  <div className="alert-header">
-                    <span className="alert-icon">{getAlertIcon(alert.type)}</span>
-                    <span className="alert-title">{alert.title}</span>
-                    <span className="alert-time">
-                      {new Date(alert.createdAt).toLocaleTimeString()}
-                    </span>
+            <ul className="alerts-list">
+              {alerts.map((alert) => (
+                <li key={alert._id} className="alert-card fade-in" style={{ borderLeft: `4px solid ${getSeverityColor(alert.severity)}` }}>
+                  <div className="card-body">
+                    <div>
+                      <h3 className="card-title flex items-center gap-2">
+                        <span aria-hidden>{getAlertIcon(alert.type)}</span>
+                        <span>{alert.title}</span>
+                      </h3>
+                      <p className="card-subtitle">{alert.message}</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span
+                        className={`badge ${
+                          alert.severity === 'critical'
+                            ? 'badge-danger'
+                            : alert.severity === 'warning'
+                            ? 'badge-warning'
+                            : alert.severity === 'info'
+                            ? 'badge-info'
+                            : 'badge-success'
+                        }`}
+                      >
+                        {alert.severity.toUpperCase()}
+                      </span>
+                      <span className="alert-meta">{formatTime(alert.createdAt)}</span>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => acknowledgeAlert(alert._id)}
+                      >
+                        Acknowledge
+                      </button>
+                    </div>
                   </div>
-                  <div className="alert-message">{alert.message}</div>
-                  <div className="alert-details">
-                    Plant: {alert.plantName} | Device: {alert.deviceId}
-                  </div>
-                </div>
-                <button 
-                  className="acknowledge-btn"
-                  onClick={() => acknowledgeAlert(alert._id)}
-                >
-                  ✓
-                </button>
-              </div>
-            ))
+                </li>
+              ))}
+            </ul>
           )}
-        </div>
+        </section>
       )}
-    </div>
+    </main>
   );
 };
 

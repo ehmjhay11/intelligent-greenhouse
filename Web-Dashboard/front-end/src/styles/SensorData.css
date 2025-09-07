@@ -24,20 +24,64 @@
 
   /* Sensors Grid Layout */
   .sensors-grid {
-    @apply grid gap-4 sm:gap-6 max-w-7xl mx-auto mb-8 sm:mb-10 px-2
-           grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+    /* Base: grid for mobile/tablet */
+    @apply max-w-7xl mx-auto mb-8 sm:mb-10 px-2 gap-4 sm:gap-6;
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  /* sm: two columns */
+  @media (min-width: 640px) {
+    .sensors-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  /* lg+: switch to single-row flex with horizontal scroll */
+  @media (min-width: 1024px) {
+    .sensors-grid {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 1.25rem; /* ~5 */
+      overflow-x: auto;
+      padding-bottom: 0.25rem;
+      scroll-snap-type: x proximity;
+    }
+  }
+
+  /* Large screens: horizontal row (no wrap) with scroll */
+  @screen lg {
+    .sensors-grid {
+      @apply block; /* reset grid for large screens */
+      display: flex; /* use flex so we can make a single row */
+      gap: 1.25rem; /* 5 */
+      overflow-x: auto;
+      padding-bottom: 0.25rem; /* subtle space for scrollbar */
+      scroll-snap-type: x proximity;
+    }
   }
 
   .sensor-wrapper {
-    @apply flex justify-center items-center min-h-[280px] sm:min-h-[320px]
+    @apply flex justify-center items-stretch min-h-[280px] sm:min-h-[320px]
       bg-transparent rounded-2xl transition-all duration-300 ease-out
       hover:-translate-y-1 relative overflow-visible;
+    scroll-snap-align: start;
+  }
+  /* Equal size cards in flex row */
+  @media (min-width: 1024px) {
+    .sensor-wrapper { flex: 0 0 auto; }
+  }
+
+  /* Equal card sizing within the wrapper */
+  .sensor-wrapper > * { @apply w-full h-full; }
+
+  /* Large screens: fix a comfortable width for consistent card sizes */
+  @media (min-width: 1024px) {
+    .sensor-wrapper > * { min-width: 320px; max-width: 340px; }
   }
 
   /* Override sensor component styles for uniformity */
   .sensor-wrapper > * {
-    /* Let the card styles from GenericSensorLive.css render fully */
-    @apply w-full max-w-full m-0 p-0;
+  /* Let the card styles from GenericSensorLive.css render fully */
+  @apply w-full max-w-full m-0 p-0;
   }
 
   /* Dashboard Footer */

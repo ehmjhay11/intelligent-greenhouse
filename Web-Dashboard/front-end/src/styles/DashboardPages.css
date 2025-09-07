@@ -1,0 +1,88 @@
+@tailwind components;
+
+@layer components {
+  /* Page container and header */
+  .page-container {
+    @apply min-h-screen bg-gradient-to-br from-primary-50 to-primary-200
+           px-4 sm:px-6 lg:px-10 pt-8 sm:pt-10 lg:pt-12 pb-10
+           flex flex-col items-center;
+  }
+
+  .page-header {
+    @apply w-full max-w-6xl relative bg-white/80 backdrop-blur rounded-2xl shadow-xl
+           border border-primary-200/60 ring-1 ring-primary-100/60
+           p-6 sm:p-8 lg:p-10 mb-6 sm:mb-8;
+  }
+  .page-header::before {
+    content: "";
+    position: absolute;
+    inset: -8% -6% auto -6%;
+    height: 36%;
+    background: radial-gradient(60% 60% at 50% 50%, rgba(59,130,246,0.12), rgba(139,92,246,0.08) 40%, transparent 70%);
+    filter: blur(18px);
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .page-title { @apply text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-primary-900 mb-2; }
+  .page-subtitle { @apply text-sm sm:text-base lg:text-lg text-primary-700; }
+
+  .page-section { @apply w-full max-w-6xl; }
+
+  /* Responsive grid for cards */
+  .grid-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+  }
+  @media (min-width: 640px) { .grid-cards { gap: 1.25rem; } }
+  @media (min-width: 1024px) { .grid-cards { gap: 1.5rem; } }
+
+  /* Card base */
+  .card { @apply bg-white rounded-2xl shadow-md border border-primary-100/60 transition-all duration-200 ease-out; }
+  .card:hover { @apply shadow-lg -translate-y-0.5; }
+  .card-body { @apply p-5 sm:p-6; }
+  .card-title { @apply text-lg sm:text-xl font-semibold text-primary-900; }
+  .card-subtitle { @apply text-sm text-primary-700; }
+
+  /* Badges */
+  .badge { @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold transition-colors duration-200; }
+  .badge-success { @apply bg-green-100 text-green-800; }
+  .badge-warning { @apply bg-yellow-100 text-yellow-800; }
+  .badge-danger  { @apply bg-red-100 text-red-800; }
+  .badge-info    { @apply bg-blue-100 text-blue-800; }
+
+  /* Sensors */
+  .sensors-grid { @apply items-stretch; }
+
+  /* Alerts */
+  .alerts-list { @apply space-y-3 sm:space-y-4; }
+  .alert-card { @apply card; }
+  .alert-card .card-body { @apply flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3; }
+  .alert-meta { @apply text-sm text-primary-600; }
+
+  /* Charts */
+  .chart-card { @apply card overflow-hidden; }
+  .chart-body { @apply card-body; }
+  .filters-grid { @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4; }
+  .no-data { @apply text-center text-primary-700 py-8; }
+  /* Visually hidden helper for accessible labels (no @apply to avoid circular deps) */
+  .visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+  /* Visually hidden (avoid @apply sr-only circular dependency) */
+  .visually-hidden {
+    position: absolute !important;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0);
+    white-space: nowrap; border: 0;
+  }
+
+  /* Animation */
+  .fade-in { animation: fadeInUp .28s ease-out both; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(6px) scale(.99); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}

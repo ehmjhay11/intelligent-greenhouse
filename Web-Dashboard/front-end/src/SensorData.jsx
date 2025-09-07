@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import GenericSensorLive from './components/GenericSensorLive';
 import './styles/SensorData.css';
+import './styles/DashboardPages.css';
 
 const API_BASE = 'http://localhost:3003/api';
 
@@ -73,21 +74,15 @@ function SensorData() {
   }, {});
 
   return (
-    <div className="sensor-data-container">
-      <div className="dashboard-header">
-        <h1 className="dashboard-title">
-          📊 Live Sensor Dashboard
-        </h1>
-        
-        <div className="inline-block px-6 py-3 rounded-full text-white font-bold mb-4"
-             style={{ backgroundColor: systemStatus.color }}>
-          System Status: {systemStatus.status}
+  <main className="page-container" role="main">
+      <header className="page-header fade-in">
+        <h1 className="page-title">Live Sensor Data</h1>
+    <div className="mt-2 mb-3 inline-flex items-center gap-2 px-4 py-2 rounded-full text-white font-semibold" style={{ backgroundColor: systemStatus.color }} role="status" aria-live="polite">
+          <span aria-hidden>📡</span>
+          <span>System Status: {systemStatus.status}</span>
         </div>
-        
-        <p className="dashboard-subtitle">
-          Monitoring {sensors.length} active sensors from {Object.keys(deviceGroups).length} devices
-        </p>
-      </div>
+    <p className="page-subtitle">Monitoring {sensors.length} active sensors from {Object.keys(deviceGroups).length} devices</p>
+      </header>
 
       {sensors.length === 0 ? (
         <div className="text-center p-16 bg-primary-50 rounded-xl border-2 border-dashed border-primary-200 max-w-2xl mx-auto">
@@ -104,11 +99,11 @@ function SensorData() {
         </div>
       ) : (
         Object.entries(deviceGroups).map(([deviceName, deviceSensors]) => (
-          <div key={deviceName} className="mb-12">
-            <h2 className="text-primary-700 mb-4 px-4 py-3 bg-primary-100 rounded-lg border-l-4 border-blue-500 text-lg font-medium">
-              📡 {deviceName}
+          <section key={deviceName} className="page-section mb-8 fade-in" aria-label={deviceName}>
+            <h2 className="card-title mb-3 flex items-center gap-2 text-primary-800">
+              <span aria-hidden>📡</span>
+              <span>{deviceName}</span>
             </h2>
-            
             <div className="sensors-grid">
               {deviceSensors.map(sensor => (
                 <div key={`${sensor.deviceId}-${sensor.id}`} className="sensor-wrapper">
@@ -116,33 +111,10 @@ function SensorData() {
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         ))
       )}
-
-      <div className="dashboard-footer">
-        <button 
-          onClick={() => navigate('/')}
-          className="back-btn"
-        >
-          ← Back to Home
-        </button>
-        
-        <button 
-          onClick={() => navigate('/manage-sensors')}
-          className="back-btn bg-blue-500 hover:bg-blue-600"
-        >
-          🔧 Manage Devices
-        </button>
-        
-        <button 
-          onClick={fetchSensors}
-          className="back-btn bg-success-600 hover:bg-success-700"
-        >
-          🔄 Refresh
-        </button>
-      </div>
-    </div>
+    </main>
   );
 }
 

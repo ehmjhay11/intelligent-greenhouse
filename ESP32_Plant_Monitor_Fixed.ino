@@ -1,16 +1,27 @@
+/*
+ * ESP32 Plant Monitor - Intelligent Greenhouse System
+ * 
+ * IMPORTANT: This sketch requires the ESP32Servo library for servo control:
+ * 1. Go to Arduino IDE > Sketch > Include Library > Manage Libraries
+ * 2. Search for "ESP32Servo" by Kevin Harrington
+ * 3. Install the ESP32Servo library
+ * 
+ * The standard Arduino Servo library does NOT work with ESP32.
+ */
+
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <DHT.h>
 #include <ArduinoJson.h>
 #include <Preferences.h>
-#include <ServoESP32.h>
+#include <ESP32Servo.h>
 
 // WiFi Configuration
 const char* ssid = "realme 10 Pro 5G";
 const char* password = "z2padqiy";
 
 // MQTT Configuration
-const char* mqtt_broker = "10.240.100.213";
+const char* mqtt_broker = "10.152.18.213";
 const int mqtt_port = 1883;
 
 // Device Configuration - Change this for each ESP32
@@ -38,7 +49,7 @@ String topic_status = "esp32_" + String(DEVICE_ID) + "/status";
 
 // Servo Configuration
 #define SERVO_PIN 18
-Servo lightServo;
+Servo servo; // ESP32Servo library instance
 
 // Calibration values
 const int DRY_VALUE = 4095;
@@ -87,6 +98,9 @@ unsigned long lastPublish = 0;
 unsigned long lastStatusUpdate = 0;
 bool thresholdsFromDashboard = false; // Track if thresholds came from dashboard
 
+// ---------------------------------------------------
+// Setup
+// ---------------------------------------------------
 void setup() {
   Serial.begin(115200);
   dht.begin();
@@ -106,8 +120,8 @@ void setup() {
   pinMode(LIGHT_LED_PIN, OUTPUT);
 
   // Initialize servo
-  lightServo.attach(SERVO_PIN);
-  lightServo.write(90); // Start at center position
+  servo.attach(SERVO_PIN);
+  servo.write(90); // Start at center position
 
   // Turn off all LEDs initially
   digitalWrite(SOIL_LED_PIN, LOW);
@@ -146,392 +160,63 @@ void setup() {
   }
 }
 
-void loop() {
-  if (!mqttClient.connected()) {
-    connectMQTT();
-  }
-  mqttClient.loop();
-
-  // Publish sensor data every 5 seconds
-  if (millis() - lastPublish >= 5000) {
-    lastPublish = millis();
-    publishSensorData();
-  }
-
-  // Send status update every 30 seconds
-  if (millis() - lastStatusUpdate >= 30000) {
-    lastStatusUpdate = millis();
-    publishStatusUpdate();
-  }
-
-  // Log current thresholds and status every 20 seconds
-  static unsigned long lastThresholdLog = 0;
-  if (millis() - lastThresholdLog >= 20000) {
-    lastThresholdLog = millis();
-    logCurrentStatus();
-  }
-
-  // Test MQTT connectivity every 60 seconds
-  static unsigned long lastMQTTTest = 0;
-  if (millis() - lastMQTTTest >= 60000) {
-    lastMQTTTest = millis();
-    testMQTTConnectivity();
-  }
-
-  delay(10);
-}
-
-void connectMQTT() {
-  Serial.print("Connecting to MQTT...");
+// ---------------------------------------------------
+// Sensor Read Functions
+// ---------------------------------------------------
+float readTemperature() {
+  float t = dht.readTemperature();
   
-  // Test basic network connectivity to MQTT broker
-  Serial.println("\n🔍 === TESTING MQTT BROKER CONNECTIVITY ===");
-  WiFiClient testClient;
-  Serial.println("🌐 Testing TCP connection to " + String(mqtt_broker) + ":" + String(mqtt_port));
-  
-  if (testClient.connect(mqtt_broker, mqtt_port)) {
-    Serial.println("✅ TCP connection to MQTT broker successful");
-    testClient.stop();
-  } else {
-    Serial.println("❌ TCP connection to MQTT broker FAILED");
-    Serial.println("❌ This indicates network/firewall issues");
-    delay(5000);
-    return;
-  }
-  
-  while (!mqttClient.connected()) {
-    String clientId = "ESP32_Device_" + String(DEVICE_ID) + "_" + String(random(0xffff), HEX);
-    Serial.println("\n🔄 === MQTT CONNECTION ATTEMPT ===");
-    Serial.println("📡 Broker: " + String(mqtt_broker) + ":" + String(mqtt_port));
-    Serial.println("🆔 Client ID: " + clientId);
-    Serial.println("📺 Will subscribe to: " + topic_commands);
-    Serial.println("📤 Will publish status to: " + topic_status);
-    
-    if (mqttClient.connect(clientId.c_str())) {
-      Serial.println("✅ MQTT connected successfully!");
-      Serial.println("ESP32 Device #" + String(DEVICE_ID) + " ready");
-      
-      // Subscribe to command topic with detailed logging
-      Serial.println("📡 Subscribing to command topic: " + topic_commands);
-      bool subscribeResult = mqttClient.subscribe(topic_commands.c_str(), 1); // QoS 1
-      Serial.println("Subscribe result: " + String(subscribeResult ? "✅ SUCCESS" : "❌ FAILED"));
-      Serial.println("QoS Level: 1 (At least once delivery)");
-      
-      if (subscribeResult) {
-        Serial.println("🎯 Successfully subscribed to: " + topic_commands);
-        Serial.println("🔄 ESP32 is now ready to receive threshold commands!");
-        Serial.println("📋 Backend should send commands to: esp32_" + String(DEVICE_ID) + "/commands");
-        
-        // Double-check subscription status
-        Serial.println("🔍 Verifying subscription...");
-        delay(1000); // Wait a moment for subscription to take effect
-        
-      } else {
-        Serial.println("❌ Failed to subscribe to command topic!");
-        Serial.println("❌ This means ESP32 cannot receive commands from backend!");
-      }
-      
-      // Send initial status
-      publishStatusUpdate();
-      
-      // Send a welcome message with detailed info
-      String welcomeMsg = "{\"device_id\":" + String(DEVICE_ID) + 
-                         ",\"message\":\"ESP32 connected and ready for commands\"" +
-                         ",\"subscribed_topic\":\"" + topic_commands + "\"" +
-                         ",\"status_topic\":\"" + topic_status + "\"" +
-                         ",\"has_saved_thresholds\":" + String(thresholdsFromDashboard ? "true" : "false") + 
-                         ",\"wifi_rssi\":" + String(WiFi.RSSI()) + 
-                         ",\"free_heap\":" + String(ESP.getFreeHeap()) + "}";
-      mqttClient.publish(topic_status.c_str(), welcomeMsg.c_str());
-      
-      Serial.println("📤 Welcome message sent");
-      Serial.println("=== MQTT CONNECTION ESTABLISHED ===\n");
-      
-    } else {
-      Serial.print("❌ MQTT connection failed, rc=");
-      Serial.print(mqttClient.state());
-      Serial.println(" trying again in 2s");
-      Serial.println("❌ Error codes: -4=timeout, -3=lost, -2=failed, -1=disconnected");
-      delay(2000);
+  // Try reading multiple times if first attempt fails
+  if (isnan(t)) {
+    delay(100);
+    t = dht.readTemperature();
+    if (isnan(t)) {
+      Serial.println("⚠️ DHT22 Temperature reading failed");
+      return -1;
     }
   }
-}
-
-void onMqttMessage(char* topic, byte* payload, unsigned int length) {
-  String message = "";
-  for (unsigned int i = 0; i < length; i++) {
-    message += (char)payload[i];
-  }
   
-  Serial.println("\n🚨 === MQTT MESSAGE RECEIVED ===");
-  Serial.println("📡 Received Topic: '" + String(topic) + "'");
-  Serial.println("🎯 Expected Topic: '" + topic_commands + "'");
-  Serial.println("✅ Topic Match: " + String(String(topic) == topic_commands ? "YES" : "NO"));
-  Serial.println("📏 Message Length: " + String(length));
-  Serial.println("📄 Raw Message: '" + message + "'");
-  Serial.println("🕐 Timestamp: " + String(millis()) + "ms");
-  
-  if (String(topic) == topic_commands) {
-    Serial.println("✅ TOPIC MATCHES! Processing command...");
-    handleCommand(message);
+  if (t < thresholds.temperature.ideal_min || t > thresholds.temperature.ideal_max) {
+    digitalWrite(TEMP_LED_PIN, HIGH);
   } else {
-    Serial.println("❌ TOPIC MISMATCH! Ignoring message.");
-    Serial.println("   Received: '" + String(topic) + "'");
-    Serial.println("   Expected: '" + topic_commands + "'");
+    digitalWrite(TEMP_LED_PIN, LOW);
   }
-  
-  Serial.println("=== END MQTT MESSAGE ===\n");
+  return t;
 }
 
-void handleCommand(String jsonMessage) {
-  Serial.println("🔧 === PROCESSING COMMAND ===");
-  Serial.println("📄 JSON Input: " + jsonMessage);
+float readHumidity() {
+  float h = dht.readHumidity();
   
-  DynamicJsonDocument doc(2048);
-  DeserializationError error = deserializeJson(doc, jsonMessage);
-  
-  if (error) {
-    Serial.println("❌ JSON PARSING FAILED!");
-    Serial.println("❌ Error: " + String(error.c_str()));
-    Serial.println("❌ Raw message: " + jsonMessage);
-    
-    // Send error response
-    String errorResponse = "{\"device_id\":" + String(DEVICE_ID) + ",\"error\":\"JSON parsing failed\",\"raw_message\":\"" + jsonMessage + "\"}";
-    mqttClient.publish(topic_status.c_str(), errorResponse.c_str());
-    return;
-  }
-  
-  String command = doc["command"];
-  Serial.println("📋 Parsed Command: '" + command + "'");
-  
-  if (command == "update_thresholds") {
-    Serial.println("🎯 UPDATING THRESHOLDS FROM DASHBOARD...");
-    if (doc.containsKey("thresholds")) {
-      updateThresholds(doc["thresholds"]);
-    } else {
-      Serial.println("❌ No 'thresholds' key found in command!");
+  // Try reading multiple times if first attempt fails
+  if (isnan(h)) {
+    delay(100);
+    h = dht.readHumidity();
+    if (isnan(h)) {
+      Serial.println("⚠️ DHT22 Humidity reading failed");
+      return -1;
     }
-  } else if (command == "get_status") {
-    Serial.println("📊 STATUS REQUEST RECEIVED");
-    publishStatusUpdate();
-  } else if (command == "test") {
-    Serial.println("🧪 TEST COMMAND RECEIVED");
-    // Just respond to test command without resetting thresholds
-    String testResponse = "{\"device_id\":" + String(DEVICE_ID) + ",\"status\":\"success\",\"message\":\"Test command received - thresholds preserved\"}";
-    mqttClient.publish(topic_status.c_str(), testResponse.c_str());
+  }
+  
+  if (h < thresholds.humidity.ideal_min || h > thresholds.humidity.ideal_max) {
+    digitalWrite(HUMIDITY_LED_PIN, HIGH);
   } else {
-    Serial.println("❌ UNKNOWN COMMAND: '" + command + "'");
-    
-    // Send unknown command response
-    String unknownResponse = "{\"device_id\":" + String(DEVICE_ID) + ",\"error\":\"Unknown command\",\"received_command\":\"" + command + "\"}";
-    mqttClient.publish(topic_status.c_str(), unknownResponse.c_str());
+    digitalWrite(HUMIDITY_LED_PIN, LOW);
   }
-  
-  Serial.println("=== COMMAND PROCESSING COMPLETE ===\n");
-}
-
-void updateThresholds(JsonObject newThresholds) {
-  Serial.println("\n🔄 === UPDATING PLANT THRESHOLDS FROM DASHBOARD ===");
-  bool anyUpdated = false;
-  
-  if (newThresholds.containsKey("temperature")) {
-    JsonObject temp = newThresholds["temperature"];
-    Serial.println("📊 Temperature thresholds found:");
-    Serial.println("   Min: " + String((float)temp["min"]));
-    Serial.println("   Max: " + String((float)temp["max"]));
-    Serial.println("   Ideal Min: " + String((float)temp["ideal_min"]));
-    Serial.println("   Ideal Max: " + String((float)temp["ideal_max"]));
-    
-    thresholds.temperature.min = temp["min"];
-    thresholds.temperature.max = temp["max"];
-    thresholds.temperature.ideal_min = temp["ideal_min"];
-    thresholds.temperature.ideal_max = temp["ideal_max"];
-    Serial.println("✅ Temperature thresholds updated");
-    anyUpdated = true;
-  }
-  
-  if (newThresholds.containsKey("humidity")) {
-    JsonObject hum = newThresholds["humidity"];
-    Serial.println("📊 Humidity thresholds found:");
-    Serial.println("   Min: " + String((float)hum["min"]));
-    Serial.println("   Max: " + String((float)hum["max"]));
-    Serial.println("   Ideal Min: " + String((float)hum["ideal_min"]));
-    Serial.println("   Ideal Max: " + String((float)hum["ideal_max"]));
-    
-    thresholds.humidity.min = hum["min"];
-    thresholds.humidity.max = hum["max"];
-    thresholds.humidity.ideal_min = hum["ideal_min"];
-    thresholds.humidity.ideal_max = hum["ideal_max"];
-    Serial.println("✅ Humidity thresholds updated");
-    anyUpdated = true;
-  }
-  
-  if (newThresholds.containsKey("soil_moisture")) {
-    JsonObject soil = newThresholds["soil_moisture"];
-    Serial.println("📊 Soil moisture thresholds found:");
-    Serial.println("   Min: " + String((float)soil["min"]));
-    Serial.println("   Max: " + String((float)soil["max"]));
-    Serial.println("   Ideal Min: " + String((float)soil["ideal_min"]));
-    Serial.println("   Ideal Max: " + String((float)soil["ideal_max"]));
-    
-    thresholds.soil_moisture.min = soil["min"];
-    thresholds.soil_moisture.max = soil["max"];
-    thresholds.soil_moisture.ideal_min = soil["ideal_min"];
-    thresholds.soil_moisture.ideal_max = soil["ideal_max"];
-    Serial.println("✅ Soil moisture thresholds updated");
-    anyUpdated = true;
-  }
-  
-  if (newThresholds.containsKey("light")) {
-    JsonObject light = newThresholds["light"];
-    Serial.println("📊 Light thresholds found:");
-    Serial.println("   Min: " + String((float)light["min"]));
-    Serial.println("   Max: " + String((float)light["max"]));
-    Serial.println("   Ideal Min: " + String((float)light["ideal_min"]));
-    Serial.println("   Ideal Max: " + String((float)light["ideal_max"]));
-    
-    thresholds.light.min = light["min"];
-    thresholds.light.max = light["max"];
-    thresholds.light.ideal_min = light["ideal_min"];
-    thresholds.light.ideal_max = light["ideal_max"];
-    Serial.println("✅ Light thresholds updated");
-    anyUpdated = true;
-  }
-  
-  if (anyUpdated) {
-    // Mark that thresholds came from dashboard
-    thresholdsFromDashboard = true;
-    
-    // Save thresholds to persistent memory
-    saveThresholdsToMemory();
-    
-    Serial.println("🎉 ALL THRESHOLDS UPDATED AND SAVED TO MEMORY!");
-    printCurrentThresholds();
-    
-    // Send detailed confirmation back to dashboard
-    String response = "{\"device_id\":" + String(DEVICE_ID) + 
-                    ",\"status\":\"success\"" +
-                    ",\"message\":\"Thresholds updated and saved to memory\"" +
-                    ",\"timestamp\":" + String(millis()) + 
-                    ",\"persistent\":true}";
-    mqttClient.publish(topic_status.c_str(), response.c_str());
-    Serial.println("📤 Confirmation sent to dashboard");
-  } else {
-    Serial.println("⚠️ No valid threshold data found in command!");
-  }
-  
-  Serial.println("=== THRESHOLD UPDATE COMPLETE ===\n");
-}
-
-void saveThresholdsToMemory() {
-  Serial.println("💾 Saving thresholds to persistent memory...");
-  
-  preferences.putFloat("temp_min", thresholds.temperature.min);
-  preferences.putFloat("temp_max", thresholds.temperature.max);
-  preferences.putFloat("temp_ideal_min", thresholds.temperature.ideal_min);
-  preferences.putFloat("temp_ideal_max", thresholds.temperature.ideal_max);
-  
-  preferences.putFloat("hum_min", thresholds.humidity.min);
-  preferences.putFloat("hum_max", thresholds.humidity.max);
-  preferences.putFloat("hum_ideal_min", thresholds.humidity.ideal_min);
-  preferences.putFloat("hum_ideal_max", thresholds.humidity.ideal_max);
-  
-  preferences.putFloat("soil_min", thresholds.soil_moisture.min);
-  preferences.putFloat("soil_max", thresholds.soil_moisture.max);
-  preferences.putFloat("soil_ideal_min", thresholds.soil_moisture.ideal_min);
-  preferences.putFloat("soil_ideal_max", thresholds.soil_moisture.ideal_max);
-  
-  preferences.putFloat("light_min", thresholds.light.min);
-  preferences.putFloat("light_max", thresholds.light.max);
-  preferences.putFloat("light_ideal_min", thresholds.light.ideal_min);
-  preferences.putFloat("light_ideal_max", thresholds.light.ideal_max);
-  
-  preferences.putBool("from_dashboard", thresholdsFromDashboard);
-  
-  Serial.println("✅ Thresholds saved to memory");
-}
-
-void loadThresholdsFromMemory() {
-  Serial.println("📖 Loading thresholds from persistent memory...");
-  
-  // Check if we have saved thresholds
-  thresholdsFromDashboard = preferences.getBool("from_dashboard", false);
-  
-  if (thresholdsFromDashboard) {
-    Serial.println("📱 Found saved thresholds from dashboard");
-    
-    thresholds.temperature.min = preferences.getFloat("temp_min", 15.0);
-    thresholds.temperature.max = preferences.getFloat("temp_max", 35.0);
-    thresholds.temperature.ideal_min = preferences.getFloat("temp_ideal_min", 20.0);
-    thresholds.temperature.ideal_max = preferences.getFloat("temp_ideal_max", 30.0);
-    
-    thresholds.humidity.min = preferences.getFloat("hum_min", 40.0);
-    thresholds.humidity.max = preferences.getFloat("hum_max", 80.0);
-    thresholds.humidity.ideal_min = preferences.getFloat("hum_ideal_min", 60.0);
-    thresholds.humidity.ideal_max = preferences.getFloat("hum_ideal_max", 70.0);
-    
-    thresholds.soil_moisture.min = preferences.getFloat("soil_min", 30.0);
-    thresholds.soil_moisture.max = preferences.getFloat("soil_max", 90.0);
-    thresholds.soil_moisture.ideal_min = preferences.getFloat("soil_ideal_min", 50.0);
-    thresholds.soil_moisture.ideal_max = preferences.getFloat("soil_ideal_max", 70.0);
-    
-    thresholds.light.min = preferences.getFloat("light_min", 200.0);
-    thresholds.light.max = preferences.getFloat("light_max", 1000.0);
-    thresholds.light.ideal_min = preferences.getFloat("light_ideal_min", 400.0);
-    thresholds.light.ideal_max = preferences.getFloat("light_ideal_max", 800.0);
-    
-    Serial.println("✅ Dashboard thresholds loaded from memory");
-  } else {
-    Serial.println("🔧 No saved dashboard thresholds found, using defaults");
-    // Default values are already set in struct initialization
-  }
-}
-
-void printCurrentThresholds() {
-  Serial.println("\n📋 === CURRENT THRESHOLDS ===");
-  Serial.println("Source: " + String(thresholdsFromDashboard ? "Dashboard (Persistent)" : "Default Values"));
-  Serial.println("🌡️ Temperature: " + String(thresholds.temperature.min) + "-" + String(thresholds.temperature.max) + "°C (Ideal: " + String(thresholds.temperature.ideal_min) + "-" + String(thresholds.temperature.ideal_max) + "°C)");
-  Serial.println("💧 Humidity: " + String(thresholds.humidity.min) + "-" + String(thresholds.humidity.max) + "% (Ideal: " + String(thresholds.humidity.ideal_min) + "-" + String(thresholds.humidity.ideal_max) + "%)");
-  Serial.println("🌱 Soil: " + String(thresholds.soil_moisture.min) + "-" + String(thresholds.soil_moisture.max) + "% (Ideal: " + String(thresholds.soil_moisture.ideal_min) + "-" + String(thresholds.soil_moisture.ideal_max) + "%)");
-  Serial.println("☀️ Light: " + String(thresholds.light.min) + "-" + String(thresholds.light.max) + " (Ideal: " + String(thresholds.light.ideal_min) + "-" + String(thresholds.light.ideal_max) + ")");
-  Serial.println("=== END THRESHOLDS ===\n");
-}
-
-void publishStatusUpdate() {
-  DynamicJsonDocument doc(512);
-  doc["device_id"] = DEVICE_ID;
-  doc["status"] = "online";
-  doc["wifi_rssi"] = WiFi.RSSI();
-  doc["uptime"] = millis();
-  doc["free_heap"] = ESP.getFreeHeap();
-  doc["timestamp"] = millis();
-  doc["subscribed_topic"] = topic_commands;
-  doc["mqtt_connected"] = mqttClient.connected();
-  doc["thresholds_source"] = thresholdsFromDashboard ? "dashboard" : "default";
-  doc["thresholds_persistent"] = thresholdsFromDashboard;
-  
-  String statusJson;
-  serializeJson(doc, statusJson);
-  
-  mqttClient.publish(topic_status.c_str(), statusJson.c_str());
-  Serial.println("📊 Status update sent: " + statusJson);
+  return h;
 }
 
 int readSoilMoisture() {
   int rawValue = analogRead(SOIL_PIN);
-  int moisturePercent = map(rawValue, DRY_VALUE, WET_VALUE, 0, 100);
-  moisturePercent = constrain(moisturePercent, 0, 100);
-
-  // LED control based on thresholds
-  if (moisturePercent < thresholds.soil_moisture.ideal_min) {
-    digitalWrite(SOIL_LED_PIN, HIGH); // Too dry
-  } else if (moisturePercent > thresholds.soil_moisture.ideal_max) {
-    digitalWrite(SOIL_LED_PIN, HIGH); // Too wet
+  int percentage = map(rawValue, DRY_VALUE, WET_VALUE, 0, 100);
+  percentage = constrain(percentage, 0, 100);
+  
+  if (percentage < thresholds.soil_moisture.ideal_min || percentage > thresholds.soil_moisture.ideal_max) {
+    digitalWrite(SOIL_LED_PIN, HIGH);
   } else {
-    digitalWrite(SOIL_LED_PIN, LOW); // Optimal
+    digitalWrite(SOIL_LED_PIN, LOW);
   }
-
-  return moisturePercent;
+  
+  return percentage;
 }
 
 int readLDR() {
@@ -539,170 +224,286 @@ int readLDR() {
   int lightPercent = map(rawValue, LDR_LIGHT, LDR_DARK, 100, 0);
   lightPercent = constrain(lightPercent, 0, 100);
 
-  // Servo control based on thresholds
+  // Debug: Print light sensor values
+  Serial.printf("🔍 Light Debug - Raw: %d, Percent: %d%%, Threshold: %.1f-%.1f\n", 
+                rawValue, lightPercent, thresholds.light.ideal_min, thresholds.light.ideal_max);
+
+  // Servo + LED control based on thresholds
   if (lightPercent < thresholds.light.ideal_min) {
-    // Too dark - rotate counter-clockwise (0 degrees)
-    lightServo.write(0);
-    digitalWrite(LIGHT_LED_PIN, HIGH); // Keep LED indicator for too dark
+    // Too dark - open shade (servo to 0)
+    Serial.println("🌑 Too dark - Opening shade (servo to 0°)");
+    servo.write(0);
+    digitalWrite(LIGHT_LED_PIN, HIGH);
+    delay(100); // Give servo time to start moving
   } else if (lightPercent > thresholds.light.ideal_max) {
-    // Too bright - rotate clockwise (180 degrees)
-    lightServo.write(180);
+    // Too bright - close shade (servo to 180)
+    Serial.println("☀️ Too bright - Closing shade (servo to 180°)");
+    servo.write(180);
     digitalWrite(LIGHT_LED_PIN, LOW);
+    delay(100); // Give servo time to start moving
   } else {
-    // Optimal light - stay at center position (90 degrees)
-    lightServo.write(90);
+    // Optimal - center position
+    Serial.println("✅ Light optimal - Center position (servo to 90°)");
+    servo.write(90);
     digitalWrite(LIGHT_LED_PIN, LOW);
+    delay(100); // Give servo time to start moving
   }
 
   return lightPercent;
 }
 
-void controlTemperatureLEDs(float temperature) {
-  if (temperature < thresholds.temperature.ideal_min) {
-    digitalWrite(TEMP_LED_PIN, HIGH); // Too cold
-  } else if (temperature > thresholds.temperature.ideal_max) {
-    digitalWrite(TEMP_LED_PIN, HIGH); // Too hot
-  } else {
-    digitalWrite(TEMP_LED_PIN, LOW); // Optimal
+// ---------------------------------------------------
+// Threshold Persistence
+// ---------------------------------------------------
+void loadThresholdsFromMemory() {
+  if (preferences.isKey("thresholds")) {
+    preferences.getBytes("thresholds", &thresholds, sizeof(thresholds));
+    thresholdsFromDashboard = true;
   }
 }
 
-void controlHumidityLEDs(float humidity) {
-  if (humidity < thresholds.humidity.ideal_min || humidity > thresholds.humidity.ideal_max) {
-    digitalWrite(HUMIDITY_LED_PIN, HIGH); // Out of range
-  } else {
-    digitalWrite(HUMIDITY_LED_PIN, LOW); // Optimal
-  }
+void saveThresholdsToMemory() {
+  preferences.putBytes("thresholds", &thresholds, sizeof(thresholds));
 }
 
-void publishSensorData() {
-  Serial.println("\n=== ESP32 Device #" + String(DEVICE_ID) + " Reading ===");
-
-  float temperature = dht.readTemperature();
-  float humidity = dht.readHumidity();
-  int soil = readSoilMoisture();
-  int light = readLDR();
-
-  // Control LEDs based on thresholds
-  if (!isnan(temperature)) {
-    controlTemperatureLEDs(temperature);
+// ---------------------------------------------------
+// MQTT Handling
+// ---------------------------------------------------
+void onMqttMessage(char* topic, byte* payload, unsigned int length) {
+  payload[length] = '\0';
+  String message = String((char*)payload);
+  Serial.println("📨 MQTT Message received [" + String(topic) + "]: " + message);
+  
+  StaticJsonDocument<512> doc;
+  DeserializationError error = deserializeJson(doc, message);
+  if (error) {
+    Serial.println("❌ JSON Parse Failed: " + String(error.c_str()));
+    return;
   }
-  if (!isnan(humidity)) {
-    controlHumidityLEDs(humidity);
-  }
 
-  // Print sensor readings with threshold status
-  Serial.println("🌡️ Temperature: " + String(temperature) + "°C " + getThresholdStatus(temperature, thresholds.temperature.ideal_min, thresholds.temperature.ideal_max));
-  Serial.println("💧 Humidity: " + String(humidity) + "% " + getThresholdStatus(humidity, thresholds.humidity.ideal_min, thresholds.humidity.ideal_max));
-  Serial.println("🌱 Soil: " + String(soil) + "% " + getThresholdStatus(soil, thresholds.soil_moisture.ideal_min, thresholds.soil_moisture.ideal_max));
-  Serial.println("☀️ Light: " + String(light) + " " + getThresholdStatus(light, thresholds.light.ideal_min, thresholds.light.ideal_max));
-
-  // Publish each sensor to its own topic
-  if (mqttClient.connected()) {
+  // Handle threshold updates
+  if (doc.containsKey("thresholds")) {
+    Serial.println("🔄 Processing threshold update...");
     
+    // Check if this is a command with thresholds
+    if (doc.containsKey("command") && doc["command"] == "update_thresholds") {
+      Serial.println("📋 Command: update_thresholds");
+      if (doc.containsKey("plant_name")) {
+        Serial.println("🌱 Plant: " + String(doc["plant_name"].as<const char*>()));
+      }
+    }
+    
+    // Update thresholds
+    if (doc["thresholds"].containsKey("temperature")) {
+      thresholds.temperature.ideal_min = doc["thresholds"]["temperature"]["min"];
+      thresholds.temperature.ideal_max = doc["thresholds"]["temperature"]["max"];
+      Serial.printf("🌡️ Temperature thresholds: %.1f - %.1f°C\n", 
+                   thresholds.temperature.ideal_min, thresholds.temperature.ideal_max);
+    }
+    
+    if (doc["thresholds"].containsKey("humidity")) {
+      thresholds.humidity.ideal_min = doc["thresholds"]["humidity"]["min"];
+      thresholds.humidity.ideal_max = doc["thresholds"]["humidity"]["max"];
+      Serial.printf("💧 Humidity thresholds: %.1f - %.1f%%\n", 
+                   thresholds.humidity.ideal_min, thresholds.humidity.ideal_max);
+    }
+    
+    if (doc["thresholds"].containsKey("soil_moisture")) {
+      thresholds.soil_moisture.ideal_min = doc["thresholds"]["soil_moisture"]["min"];
+      thresholds.soil_moisture.ideal_max = doc["thresholds"]["soil_moisture"]["max"];
+      Serial.printf("🌱 Soil moisture thresholds: %.1f - %.1f%%\n", 
+                   thresholds.soil_moisture.ideal_min, thresholds.soil_moisture.ideal_max);
+    }
+    
+    if (doc["thresholds"].containsKey("light")) {
+      thresholds.light.ideal_min = doc["thresholds"]["light"]["min"];
+      thresholds.light.ideal_max = doc["thresholds"]["light"]["max"];
+      Serial.printf("☀️ Light thresholds: %.1f - %.1f\n", 
+                   thresholds.light.ideal_min, thresholds.light.ideal_max);
+    }
+    
+    thresholdsFromDashboard = true;
+    saveThresholdsToMemory();
+    
+    Serial.println("✅ Thresholds updated from dashboard and saved to memory.");
+    Serial.println("📋 New thresholds:");
+    printCurrentThresholds();
+    
+    // Send acknowledgment back
+    StaticJsonDocument<128> ackDoc;
+    ackDoc["status"] = "thresholds_updated";
+    ackDoc["device_id"] = DEVICE_ID;
+    ackDoc["timestamp"] = millis();
+    
+    char ackBuffer[128];
+    serializeJson(ackDoc, ackBuffer);
+    mqttClient.publish(topic_status.c_str(), ackBuffer);
+    Serial.println("📤 Acknowledgment sent to: " + topic_status);
+  }
+  
+  // Handle other commands
+  else if (doc.containsKey("command")) {
+    String command = doc["command"];
+    Serial.println("📋 Received command: " + command);
+    
+    if (command == "ping" || command == "test") {
+      // Respond to ping/test commands
+      StaticJsonDocument<128> responseDoc;
+      responseDoc["status"] = "online";
+      responseDoc["device_id"] = DEVICE_ID;
+      responseDoc["command_received"] = command;
+      responseDoc["timestamp"] = millis();
+      
+      char responseBuffer[128];
+      serializeJson(responseDoc, responseBuffer);
+      mqttClient.publish(topic_status.c_str(), responseBuffer);
+      Serial.println("📤 Test response sent");
+    }
+  }
+}
+
+void reconnect() {
+  while (!mqttClient.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    String clientId = "ESP32_Client_" + String(DEVICE_ID) + "_" + String(WiFi.macAddress());
+    
+    // Add connection timeout and retry logic
+    mqttClient.setKeepAlive(60);
+    mqttClient.setSocketTimeout(30);
+    
+    if (mqttClient.connect(clientId.c_str())) {
+      Serial.println("connected");
+      mqttClient.subscribe(topic_commands.c_str());
+      mqttClient.publish(topic_status.c_str(), "Device reconnected");
+      Serial.println("✅ MQTT Connected successfully!");
+      Serial.println("📺 Subscribed to: " + topic_commands);
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(mqttClient.state());
+      Serial.println(" try again in 5 seconds");
+      
+      // Print more detailed error information
+      switch(mqttClient.state()) {
+        case -4:
+          Serial.println("❌ MQTT_CONNECTION_TIMEOUT - Cannot reach broker");
+          Serial.println("🔍 Check if broker IP 10.152.18.213 is correct and accessible");
+          break;
+        case -3:
+          Serial.println("❌ MQTT_CONNECTION_LOST");
+          break;
+        case -2:
+          Serial.println("❌ MQTT_CONNECT_FAILED");
+          break;
+        case -1:
+          Serial.println("❌ MQTT_DISCONNECTED");
+          break;
+        case 1:
+          Serial.println("❌ MQTT_CONNECT_BAD_PROTOCOL");
+          break;
+        case 2:
+          Serial.println("❌ MQTT_CONNECT_BAD_CLIENT_ID");
+          break;
+        case 3:
+          Serial.println("❌ MQTT_CONNECT_UNAVAILABLE");
+          break;
+        case 4:
+          Serial.println("❌ MQTT_CONNECT_BAD_CREDENTIALS");
+          break;
+        case 5:
+          Serial.println("❌ MQTT_CONNECT_UNAUTHORIZED");
+          break;
+      }
+      
+      delay(5000);
+    }
+  }
+}
+
+// ---------------------------------------------------
+// Debug Print
+// ---------------------------------------------------
+void printCurrentThresholds() {
+  Serial.println("=== Current Thresholds ===");
+  Serial.printf("Temperature: %.1f - %.1f °C\n", thresholds.temperature.ideal_min, thresholds.temperature.ideal_max);
+  Serial.printf("Humidity: %.1f - %.1f %%\n", thresholds.humidity.ideal_min, thresholds.humidity.ideal_max);
+  Serial.printf("Soil Moisture: %.1f - %.1f %%\n", thresholds.soil_moisture.ideal_min, thresholds.soil_moisture.ideal_max);
+  Serial.printf("Light: %.1f - %.1f\n", thresholds.light.ideal_min, thresholds.light.ideal_max);
+}
+
+// ---------------------------------------------------
+// Loop
+// ---------------------------------------------------
+void loop() {
+  if (!mqttClient.connected()) {
+    reconnect();
+  }
+  mqttClient.loop();
+
+  unsigned long now = millis();
+
+  // Sensor data every 5s
+  if (now - lastPublish > 5000) {
+    lastPublish = now;
+
+    Serial.println("📊 Reading sensors...");
+    
+    float temp = readTemperature();
+    float hum = readHumidity();
+    int soil = readSoilMoisture();
+    int light = readLDR();
+    
+    // Debug: Print all sensor readings
+    Serial.printf("🌡️ Temperature: %.2f°C\n", temp);
+    Serial.printf("💧 Humidity: %.2f%%\n", hum);
+    Serial.printf("🌱 Soil Moisture: %d%%\n", soil);
+    Serial.printf("☀️ Light: %d\n", light);
+    
+    // Publish individual sensor readings regardless of DHT status
     // Temperature
-    if (!isnan(temperature)) {
-      String tempPayload = "{\"temperature\":" + String(temperature, 1) + ",\"status\":\"" + getThresholdStatus(temperature, thresholds.temperature.ideal_min, thresholds.temperature.ideal_max) + "\"}";
-      mqttClient.publish(topic_temperature.c_str(), tempPayload.c_str());
+    if (temp != -1) {
+      bool tempPublished = mqttClient.publish(topic_temperature.c_str(), String(temp).c_str());
+      Serial.printf("📤 Temperature published: %s (success: %d)\n", String(temp).c_str(), tempPublished);
+    } else {
+      Serial.println("❌ Temperature reading failed");
     }
     
     // Humidity
-    if (!isnan(humidity)) {
-      String humPayload = "{\"humidity\":" + String(humidity, 1) + ",\"status\":\"" + getThresholdStatus(humidity, thresholds.humidity.ideal_min, thresholds.humidity.ideal_max) + "\"}";
-      mqttClient.publish(topic_humidity.c_str(), humPayload.c_str());
-    }
-    
-    // Soil Moisture
-    String soilPayload = "{\"soil_moisture\":" + String(soil) + ",\"status\":\"" + getThresholdStatus(soil, thresholds.soil_moisture.ideal_min, thresholds.soil_moisture.ideal_max) + "\"}";
-    mqttClient.publish(topic_soil.c_str(), soilPayload.c_str());
-    
-    // Light Level
-    String lightPayload = "{\"light_level\":" + String(light) + ",\"status\":\"" + getThresholdStatus(light, thresholds.light.ideal_min, thresholds.light.ideal_max) + "\"}";
-    mqttClient.publish(topic_light.c_str(), lightPayload.c_str());
-    
-  } else {
-    Serial.println("❌ MQTT not connected!");
-  }
-}
-
-String getThresholdStatus(float value, float idealMin, float idealMax) {
-  if (value >= idealMin && value <= idealMax) {
-    return "OPTIMAL";
-  } else if (value < idealMin) {
-    return "LOW";
-  } else {
-    return "HIGH";
-  }
-}
-
-void logCurrentStatus() {
-  Serial.println("\n🔄 === 20-SECOND STATUS LOG ===");
-  Serial.println("🕐 Uptime: " + String(millis() / 1000) + " seconds");
-  Serial.println("📶 WiFi Status: " + String(WiFi.isConnected() ? "Connected" : "Disconnected"));
-  Serial.println("📶 WiFi RSSI: " + String(WiFi.RSSI()) + " dBm");
-  Serial.println("📡 MQTT Status: " + String(mqttClient.connected() ? "Connected" : "Disconnected"));
-  
-  if (mqttClient.connected()) {
-    Serial.println("✅ MQTT Broker: " + String(mqtt_broker) + ":" + String(mqtt_port));
-    Serial.println("📺 Listening on: " + topic_commands);
-  } else {
-    Serial.println("❌ MQTT Disconnected - will attempt reconnection");
-  }
-  
-  Serial.println("🆔 Device ID: " + String(DEVICE_ID));
-  Serial.println("💾 Free Heap: " + String(ESP.getFreeHeap()) + " bytes");
-  
-  // Current thresholds summary
-  Serial.println("📋 Threshold Source: " + String(thresholdsFromDashboard ? "Dashboard (Persistent)" : "Default Values"));
-  Serial.println("🌡️ Temp: " + String(thresholds.temperature.ideal_min) + "-" + String(thresholds.temperature.ideal_max) + "°C");
-  Serial.println("💧 Humidity: " + String(thresholds.humidity.ideal_min) + "-" + String(thresholds.humidity.ideal_max) + "%");
-  Serial.println("🌱 Soil: " + String(thresholds.soil_moisture.ideal_min) + "-" + String(thresholds.soil_moisture.ideal_max) + "%");
-  Serial.println("☀️ Light: " + String(thresholds.light.ideal_min) + "-" + String(thresholds.light.ideal_max));
-  
-  Serial.println("=== END STATUS LOG ===\n");
-}
-
-void testMQTTConnectivity() {
-  Serial.println("\n🧪 === MQTT CONNECTIVITY TEST ===");
-  
-  if (mqttClient.connected()) {
-    // Send a test message to verify MQTT publishing works
-    String testPayload = "{\"device_id\":" + String(DEVICE_ID) + 
-                        ",\"test\":\"connectivity_check\"" +
-                        ",\"timestamp\":" + String(millis()) + 
-                        ",\"subscribed_topic\":\"" + topic_commands + "\"" +
-                        ",\"message\":\"ESP32 MQTT test - listening for commands\"}";
-    
-    bool publishResult = mqttClient.publish(topic_status.c_str(), testPayload.c_str());
-    
-    Serial.println("🧪 Test publish to '" + topic_status + "': " + String(publishResult ? "SUCCESS" : "FAILED"));
-    Serial.println("🧪 Payload: " + testPayload);
-    Serial.println("🎯 Waiting for commands on: " + topic_commands);
-    Serial.println("📡 Backend should publish to: esp32_" + String(DEVICE_ID) + "/commands");
-    
-    if (publishResult) {
-      Serial.println("✅ MQTT publish capability confirmed");
-      
-      // Test self-subscription by publishing a test command to ourselves
-      String selfTestCmd = "{\"command\":\"test\",\"source\":\"self_test\",\"timestamp\":" + String(millis()) + "}";
-      Serial.println("🧪 SELF-TEST: Sending test command to ourselves...");
-      Serial.println("🧪 Publishing to: " + topic_commands);
-      Serial.println("🧪 Test command: " + selfTestCmd);
-      
-      bool selfTestResult = mqttClient.publish(topic_commands.c_str(), selfTestCmd.c_str());
-      Serial.println("🧪 Self-test publish result: " + String(selfTestResult ? "SUCCESS" : "FAILED"));
-      
-      if (selfTestResult) {
-        Serial.println("🧪 If subscription works, we should receive this message in ~1 second");
-      }
-      
+    if (hum != -1) {
+      bool humPublished = mqttClient.publish(topic_humidity.c_str(), String(hum).c_str());
+      Serial.printf("📤 Humidity published: %s (success: %d)\n", String(hum).c_str(), humPublished);
     } else {
-      Serial.println("❌ MQTT publish failed - connection issues");
+      Serial.println("❌ Humidity reading failed");
     }
-  } else {
-    Serial.println("❌ MQTT not connected - cannot test publishing");
-    Serial.println("🔄 Connection will be attempted in main loop");
+    
+    // Soil moisture (always publish as it doesn't depend on DHT)
+    bool soilPublished = mqttClient.publish(topic_soil.c_str(), String(soil).c_str());
+    Serial.printf("📤 Soil Moisture published: %s (success: %d)\n", String(soil).c_str(), soilPublished);
+    
+    // Light (always publish)
+    bool lightPublished = mqttClient.publish(topic_light.c_str(), String(light).c_str());
+    Serial.printf("📤 Light published: %s (success: %d)\n", String(light).c_str(), lightPublished);
+    
+    // Create combined JSON for debugging
+    StaticJsonDocument<256> doc;
+    doc["device_id"] = DEVICE_ID;
+    doc["temperature"] = (temp != -1) ? temp : 0;
+    doc["humidity"] = (hum != -1) ? hum : 0;
+    doc["soil_moisture"] = soil;
+    doc["light"] = light;
+    doc["timestamp"] = now;
+    
+    char buffer[256];
+    size_t n = serializeJson(doc, buffer);
+    bool combinedPublished = mqttClient.publish(("esp32_" + String(DEVICE_ID) + "/data").c_str(), buffer, n);
+    Serial.printf("📤 Combined data published (success: %d): %s\n", combinedPublished, buffer);
+    
+    Serial.println("---");
   }
-  
-  Serial.println("=== END MQTT TEST ===\n");
+
+  // Status update every 30s
+  if (now - lastStatusUpdate > 30000) {
+    lastStatusUpdate = now;
+    bool statusPublished = mqttClient.publish(topic_status.c_str(), "Device online");
+    Serial.printf("📤 Status published (success: %d)\n", statusPublished);
+  }
 }

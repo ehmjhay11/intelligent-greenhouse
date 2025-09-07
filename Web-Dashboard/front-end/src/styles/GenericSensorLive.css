@@ -6,9 +6,15 @@
     /* Modern card: subtle background, soft shadow, rounded corners */
     @apply rounded-2xl p-6 m-3 min-w-[260px] max-w-[360px]
       bg-gradient-to-b from-white via-primary-50 to-primary-100
-      shadow-md border border-primary-200/60
+    shadow-md border border-primary-200/60
       transition-all duration-300 ease-out cursor-default;
   }
+
+  /* Type accents - subtle colored border and header icon tint */
+  .sensor-card.type-soil_moisture { @apply border-green-200/70; }
+  .sensor-card.type-temperature { @apply border-red-200/70; }
+  .sensor-card.type-humidity { @apply border-blue-200/70; }
+  .sensor-card.type-light { @apply border-yellow-200/70; }
 
   .sensor-header {
     /* Center header content vertically and horizontally */
@@ -16,7 +22,7 @@
   }
 
   .sensor-icon {
-  @apply text-4xl;
+  @apply text-4xl transition-transform duration-200 ease-out;
   }
 
   .sensor-info {
@@ -35,7 +41,7 @@
   }
 
   .sensor-value {
-    @apply text-4xl sm:text-5xl font-extrabold mb-1 transition-colors duration-300 leading-none;
+    @apply text-4xl sm:text-5xl font-extrabold mb-1 transition-all duration-300 leading-none;
   }
 
   .connection-status {
@@ -102,6 +108,10 @@
   .sensor-card.loading {
     @apply animate-pulse;
   }
+
+  /* Hover polish */
+  .sensor-card:hover .sensor-icon { @apply scale-110; }
+  .sensor-card:hover { @apply -translate-y-0.5 shadow-lg; }
 
   /* Connection indicators */
   .connection-indicator {

@@ -5,33 +5,41 @@ import SensorManagement from './SensorManagement';
 import PlantManagement from './PlantManagement';
 import AlertsPanel from './AlertsPanel';
 import HistoricalDashboard from './HistoricalDashboard';
+import Reports from './Reports';
 
 function Home() {
   const navigate = useNavigate();
   return (
     <div className="app-container">
-      <header className="app-header">
+      <header className="app-header" role="banner">
         <h1 className="main-title">Welcome to the Automated Greenhouse Control System</h1>
-        <p className="subtitle">
-          Monitor and control your greenhouse environment with ease.
-        </p>
-        <div className="flex gap-4 justify-center flex-wrap">
+        <p className="subtitle">Monitor and control your greenhouse environment with ease.</p>
+        <nav aria-label="Primary" className="app-actions">
           <button className="sensor-btn" onClick={() => navigate('/sensors')}>
-            📊 View Sensor Data
+            <span aria-hidden>📊</span>
+            <span>View Sensor Data</span>
           </button>
           <button className="sensor-btn" onClick={() => navigate('/manage-sensors')}>
-            🔧 Manage Sensors
+            <span aria-hidden>🔧</span>
+            <span>Manage Sensors</span>
           </button>
           <button className="sensor-btn" onClick={() => navigate('/plants')}>
-            🌱 Manage Plants
+            <span aria-hidden>🌱</span>
+            <span>Manage Plants</span>
           </button>
           <button className="sensor-btn" onClick={() => navigate('/alerts')}>
-            🚨 View Alerts
+            <span aria-hidden>🚨</span>
+            <span>View Alerts</span>
           </button>
           <button className="sensor-btn" onClick={() => navigate('/historical')}>
-            📈 Historical Data
+            <span aria-hidden>📈</span>
+            <span>Historical Data</span>
           </button>
-        </div>
+          <button className="sensor-btn" onClick={() => navigate('/reports')}>
+            <span aria-hidden>📝</span>
+            <span>Reports</span>
+          </button>
+        </nav>
       </header>
     </div>
   );
@@ -47,6 +55,7 @@ function App() {
         <Route path="/plants" element={<PlantManagement />} />
         <Route path="/alerts" element={<AlertsPanel />} />
         <Route path="/historical" element={<HistoricalDashboard />} />
+  <Route path="/reports" element={<Reports />} />
       </Routes>
     </Router>
   );

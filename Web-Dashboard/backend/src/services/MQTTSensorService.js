@@ -3,7 +3,7 @@ const mqtt = require('mqtt');
 class MQTTSensorService {
   constructor() {
     this.client = null;
-    this.brokerUrl = 'mqtt://10.240.100.213:1883';
+  this.brokerUrl = 'mqtt://10.152.18.213:1883';
     this.isConnected = false;
     this.subscribedTopics = new Set();
     this.handleSensorData = null; // Will be set by the sensors route

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './styles/PlantManagement.css';
 
 const PlantManagement = () => {
@@ -13,6 +13,7 @@ const PlantManagement = () => {
     type: '',
     description: '',
     stage: 'seedling',
+  assignedDevices: [],
     thresholds: {
       temperature: { min: 20, max: 30, ideal_min: 22, ideal_max: 26 },
       humidity: { min: 40, max: 80, ideal_min: 60, ideal_max: 70 },
@@ -21,12 +22,31 @@ const PlantManagement = () => {
     }
   });
 
+  const fetchPlants = useCallback(async () => {
+    try {
+      console.log('Fetching plants from backend...');
+      const response = await fetch('http://localhost:3003/api/plants');
+      const result = await response.json();
+      console.log('Plants response:', result);
+      if (result.success && result.data) {
+        setPlants(result.data);
+        console.log('Plants loaded:', result.data.length, 'plants');
+  await syncDevicesWithPlants(result.data);
+      } else {
+        console.error('Invalid response format:', result);
+        setPlants([]);
+      }
+    } catch (error) {
+      console.error('Error fetching plants:', error);
+      setPlants([]);
+    }
+  }, []);
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       setError(null);
       try {
-        // fetchPlants will automatically sync devices
         await fetchPlants();
       } catch (err) {
         setError('Failed to load data');
@@ -37,28 +57,7 @@ const PlantManagement = () => {
     };
     
     loadData();
-  }, []);
-
-  const fetchPlants = async () => {
-    try {
-      console.log('Fetching plants from backend...');
-      const response = await fetch('http://localhost:3003/api/plants');
-      const result = await response.json();
-      console.log('Plants response:', result);
-      if (result.success && result.data) {
-        setPlants(result.data);
-        console.log('Plants loaded:', result.data.length, 'plants');
-        // Sync devices with the latest plant data
-        await syncDevicesWithPlants(result.data);
-      } else {
-        console.error('Invalid response format:', result);
-        setPlants([]);
-      }
-    } catch (error) {
-      console.error('Error fetching plants:', error);
-      setPlants([]);
-    }
-  };
+  }, [fetchPlants]);
 
   const syncDevicesWithPlants = async (currentPlants) => {
     try {
@@ -73,15 +72,9 @@ const PlantManagement = () => {
         
         // Add assignedPlant field to devices based on plant assignments
         const devicesWithAssignments = result.data.map(device => {
-          // Find if any plant is assigned to this device - convert device.id to string for comparison
           const deviceIdStr = String(device.id);
-          const assignedPlant = currentPlants.find(plant => String(plant.assignedDevice) === deviceIdStr);
-          console.log(`Device ${device.id} (${device.name}): assigned to plant`, assignedPlant ? assignedPlant.name : 'none');
-          console.log(`  - Checking deviceId: ${deviceIdStr} against plant assignedDevices:`, currentPlants.map(p => String(p.assignedDevice)));
-          return {
-            ...device,
-            assignedPlant: assignedPlant ? assignedPlant._id : null
-          };
+          const assignedPlant = currentPlants.find(plant => Array.isArray(plant.assignedDevices) && plant.assignedDevices.includes(deviceIdStr));
+          return { ...device, assignedPlant: assignedPlant ? assignedPlant._id : null };
         });
         
         console.log('Devices with assignments:', devicesWithAssignments);
@@ -96,9 +89,7 @@ const PlantManagement = () => {
     }
   };
 
-  const fetchDevices = async () => {
-    return syncDevicesWithPlants(plants);
-  };
+  // Removed unused fetchDevices (sync is triggered by fetchPlants)
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -113,7 +104,10 @@ const PlantManagement = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          assignedDevices: Array.isArray(formData.assignedDevices) ? formData.assignedDevices.map(String) : [],
+        }),
       });
 
       if (response.ok) {
@@ -206,9 +200,15 @@ const sendThresholdsToDevice = async (plant) => {
     console.log('📋 Plant Details:', {
       id: plant._id,
       name: plant.name,
-      assignedDevice: plant.assignedDevice,
+      assignedDevices: plant.assignedDevices,
       thresholds: plant.thresholds
     });
+    
+    // Check if plant has assigned devices
+    if (!plant.assignedDevices || plant.assignedDevices.length === 0) {
+      alert('❌ No devices assigned to this plant. Please assign a device first.');
+      return;
+    }
     
     const requestUrl = `http://localhost:3003/api/plants/${plant._id}/send-thresholds`;
     console.log('📤 Request URL:', requestUrl);
@@ -217,6 +217,9 @@ const sendThresholdsToDevice = async (plant) => {
     
     const response = await fetch(requestUrl, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
 
     console.log('📊 Response Status:', response.status, response.statusText);
@@ -224,19 +227,45 @@ const sendThresholdsToDevice = async (plant) => {
     const responseData = await response.json();
     console.log('📄 Response Data:', responseData);
 
-    if (response.ok) {
-      console.log('✅ SUCCESS: Frontend request completed successfully');
-      console.log('📡 Device ID that should receive:', plant.assignedDevice);
-      console.log('📺 Now check backend logs for MQTT publishing...');
-      alert(`✅ Thresholds sent to ${plant.name}'s device successfully!\n🔍 Check backend logs and ESP32 Serial Monitor for confirmation.`);
+    if (response.ok && responseData.success) {
+      console.log('✅ SUCCESS: Thresholds sent successfully');
+      console.log('📡 Devices that received thresholds:', responseData.devices);
+      console.log('📺 Check ESP32 Serial Monitor for threshold update confirmation...');
+      
+      const deviceList = responseData.devices
+        .filter(d => d.success)
+        .map(d => `Device #${d.deviceId}`)
+        .join(', ');
+      
+      alert(`✅ Thresholds sent successfully!\n\n` +
+            `🌱 Plant: ${plant.name}\n` +
+            `📡 Devices: ${deviceList}\n\n` +
+            `🔍 Check ESP32 Serial Monitor for confirmation.`);
     } else {
       console.error('❌ ERROR: Failed to send thresholds');
       console.error('❌ Error details:', responseData);
-      alert(`❌ Failed to send thresholds to device: ${responseData.message || 'Unknown error'}`);
+      
+      let errorMessage = responseData.message || 'Unknown error';
+      if (responseData.devices) {
+        const failedDevices = responseData.devices
+          .filter(d => !d.success)
+          .map(d => `Device #${d.deviceId}: ${d.error || 'Failed'}`)
+          .join('\n');
+        if (failedDevices) {
+          errorMessage += '\n\nFailed devices:\n' + failedDevices;
+        }
+      }
+      
+      alert(`❌ Failed to send thresholds:\n\n${errorMessage}\n\n` +
+            `💡 Tips:\n` +
+            `• Check if the device is online\n` +
+            `• Verify MQTT broker connection\n` +
+            `• Check backend logs for details`);
     }
   } catch (error) {
     console.error('❌ NETWORK ERROR: Error sending thresholds:', error);
-    alert('❌ Network error sending thresholds to device');
+    alert(`❌ Network error sending thresholds:\n\n${error.message}\n\n` +
+          `💡 Check if the backend server is running.`);
   }
 };
 // ...existing code...
@@ -296,7 +325,10 @@ const sendThresholdsToDevice = async (plant) => {
 
   const startEdit = (plant) => {
     setEditingPlant(plant);
-    setFormData(plant);
+    setFormData({
+      ...plant,
+      assignedDevices: Array.isArray(plant.assignedDevices) ? plant.assignedDevices : [],
+    });
   };
 
   const updateThreshold = (sensor, field, value) => {
@@ -339,13 +371,12 @@ const sendThresholdsToDevice = async (plant) => {
 
   const getDeviceForPlant = (plantId) => {
     const plant = plants.find(p => p._id === plantId);
-    if (!plant || !plant.assignedDevice) return null;
-    return devices.find(device => String(device.id) === String(plant.assignedDevice));
+  if (!plant || !Array.isArray(plant.assignedDevices) || plant.assignedDevices.length === 0) return null;
+  // Return first for compatibility when needed
+  return devices.find(device => String(device.id) === String(plant.assignedDevices[0]));
   };
 
-  const getUnassignedDevices = () => {
-    return devices.filter(device => !device.assignedPlant);
-  };
+  // Removed unused getUnassignedDevices helper
 
   // Normalize device labels like "ESP32 Device #X" -> "Device #X" for UI display
   const formatDeviceLabel = (name) => {
@@ -376,6 +407,11 @@ const sendThresholdsToDevice = async (plant) => {
     React.useImperativeHandle(ref, () => ({
       requestClose: () => handleRequestClose(),
     }));
+
+    const handleRequestClose = useCallback(() => {
+      setShow(false);
+      setTimeout(() => onClose?.(), 200);
+    }, [onClose]);
 
     useEffect(() => {
       previouslyFocusedRef.current = document.activeElement;
@@ -431,13 +467,7 @@ const sendThresholdsToDevice = async (plant) => {
         // Return focus
         previouslyFocusedRef.current && previouslyFocusedRef.current.focus?.();
       };
-    }, [initialFocusRef]);
-
-    const handleRequestClose = () => {
-      setShow(false);
-      // Match CSS transition duration (200ms)
-      setTimeout(() => onClose?.(), 200);
-    };
+    }, [initialFocusRef, handleRequestClose]);
 
     const onOverlayMouseDown = (e) => {
       if (e.target === e.currentTarget) handleRequestClose();
@@ -519,7 +549,7 @@ const sendThresholdsToDevice = async (plant) => {
       </div>
 
       {isAdding && (
-        <Modal title="Add New Plant" onClose={resetForm} initialFocusRef={addNameInputRef} ref={addModalRef}>
+  <Modal title="Add New Plant" onClose={resetForm} initialFocusRef={addNameInputRef} ref={addModalRef}>
           <form onSubmit={handleSubmit} className="plant-form modal-form">
             <div className="form-grid">
               <div className="form-group">
@@ -571,6 +601,30 @@ const sendThresholdsToDevice = async (plant) => {
                   placeholder="Brief description of the plant variety..."
                   rows="3"
                 />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Assign Devices (optional)</label>
+              <div className="checkbox-list">
+                {devices.map(d => (
+                  <label key={d.id} className="checkbox-item">
+                    <input
+                      type="checkbox"
+                      checked={(formData.assignedDevices || []).includes(String(d.id))}
+                      onChange={(e) => {
+                        const id = String(d.id);
+                        setFormData(prev => ({
+                          ...prev,
+                          assignedDevices: e.target.checked
+                            ? Array.from(new Set([...(prev.assignedDevices || []), id]))
+                            : (prev.assignedDevices || []).filter(x => x !== id)
+                        }));
+                      }}
+                    />
+                    <span>{formatDeviceLabel(d.name)}</span>
+                  </label>
+                ))}
               </div>
             </div>
 
@@ -627,7 +681,7 @@ const sendThresholdsToDevice = async (plant) => {
 
       {/* Keep editing inline for now */}
       {editingPlant && !isAdding && (
-        <form onSubmit={handleSubmit} className="plant-form">
+  <form onSubmit={handleSubmit} className="plant-form">
           <h3>Edit Plant</h3>
           <div className="form-grid">
             <div className="form-group">
@@ -640,6 +694,30 @@ const sendThresholdsToDevice = async (plant) => {
                 required
                 placeholder="e.g., Cherry Tomatoes"
               />
+            </div>
+
+            <div className="form-group">
+              <label>Assign Devices (optional)</label>
+              <div className="checkbox-list">
+                {devices.map(d => (
+                  <label key={d.id} className="checkbox-item">
+                    <input
+                      type="checkbox"
+                      checked={(formData.assignedDevices || []).includes(String(d.id))}
+                      onChange={(e) => {
+                        const id = String(d.id);
+                        setFormData(prev => ({
+                          ...prev,
+                          assignedDevices: e.target.checked
+                            ? Array.from(new Set([...(prev.assignedDevices || []), id]))
+                            : (prev.assignedDevices || []).filter(x => x !== id)
+                        }));
+                      }}
+                    />
+                    <span>{formatDeviceLabel(d.name)}</span>
+                  </label>
+                ))}
+              </div>
             </div>
             <div className="form-group">
               <label htmlFor="edit-plant-type">Plant Type</label>
@@ -745,8 +823,11 @@ const sendThresholdsToDevice = async (plant) => {
 
               <div className="plant-stats">
                 <span className="plant-stat">Type: {plant.type}</span>
-                {assignedDevice && (
-                  <span className="plant-stat">Device: {formatDeviceLabel(assignedDevice.name)}</span>
+                {Array.isArray(plant.assignedDevices) && plant.assignedDevices.length > 0 && (
+                  <span className="plant-stat">Devices: {(plant.assignedDevices || []).map(id => {
+                    const dev = devices.find(d => String(d.id) === String(id));
+                    return formatDeviceLabel(dev?.name || `Device ${id}`);
+                  }).join(', ')}</span>
                 )}
               </div>
 
@@ -776,17 +857,17 @@ const sendThresholdsToDevice = async (plant) => {
                 >
                   Edit
                 </button>
-                {assignedDevice && (
+        {Array.isArray(plant.assignedDevices) && plant.assignedDevices.length > 0 && (
                   <>
                     <button 
                       className="btn btn-warning btn-sm"
-                      onClick={() => sendThresholdsToDevice(plant)}
+          onClick={() => sendThresholdsToDevice(plant)}
                     >
                       📡 Send to Device
                     </button>
                     <button 
                       className="btn btn-info btn-sm"
-                      onClick={() => sendTestCommand(assignedDevice.id)}
+          onClick={() => plant.assignedDevices.forEach(id => sendTestCommand(id))}
                       title="Send test command to ESP32 for debugging"
                     >
                       🧪 Test Command
@@ -805,10 +886,10 @@ const sendThresholdsToDevice = async (plant) => {
         })}
       </div>
 
-      <h3>📡 Device Assignment</h3>
+    <h3>📡 Device Assignment</h3>
       <div className="assignment-grid">
         {devices.map(device => {
-          const assignedPlant = plants.find(plant => plant._id === device.assignedPlant);
+      const assignedPlant = plants.find(plant => Array.isArray(plant.assignedDevices) && plant.assignedDevices.includes(String(device.id)));
           
           return (
             <div key={device.id} className="device-assignment-card">
@@ -832,26 +913,38 @@ const sendThresholdsToDevice = async (plant) => {
               <select
                 className="assignment-select"
                 value={device.assignedPlant || ''}
-                onChange={(e) => {
+                onChange={async (e) => {
                   const selectedPlantId = e.target.value;
-                  console.log('Plant selected for device', device.id, ':', selectedPlantId);
-                  console.log('Available plants:', plants.map(p => ({ id: p._id, name: p.name })));
+                  const id = String(device.id);
                   if (selectedPlantId) {
-                    handleAssignDevice(selectedPlantId, String(device.id));
+                    // Add device to plant's assignedDevices
+                    const plant = plants.find(p => p._id === selectedPlantId);
+                    const updated = Array.from(new Set([...(plant?.assignedDevices || []), id]));
+                    await fetch(`http://localhost:3003/api/plants/${selectedPlantId}/set-devices`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ deviceIds: updated })
+                    });
+                    await fetchPlants();
                   } else {
-                    // Handle unassigning - we need to find which plant has this device and unassign it
-                    const plantWithThisDevice = plants.find(plant => String(plant.assignedDevice) === String(device.id));
-                    console.log('Plant with this device for unassigning:', plantWithThisDevice);
-                    if (plantWithThisDevice) {
-                      handleUnassignDevice(plantWithThisDevice._id);
+                    // remove device from whoever currently has it
+                    const plantWithDevice = plants.find(p => Array.isArray(p.assignedDevices) && p.assignedDevices.includes(id));
+                    if (plantWithDevice) {
+                      const updated = plantWithDevice.assignedDevices.filter(d => d !== id);
+                      await fetch(`http://localhost:3003/api/plants/${plantWithDevice._id}/set-devices`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ deviceIds: updated })
+                      });
+                      await fetchPlants();
                     }
                   }
                 }}
               >
                 <option value="">Select a plant...</option>
-        {plants.map(plant => (
+                {plants.map(plant => (
                   <option key={plant._id} value={plant._id}>
-          {getPlantTypeIcon(plant.type)} {plant.name}
+                    {getPlantTypeIcon(plant.type)} {plant.name}
                   </option>
                 ))}
               </select>

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import './styles/SensorManagement.css';
 
 const API_BASE = 'http://localhost:3003/api';
 
@@ -7,12 +8,14 @@ function SensorManagement() {
   const navigate = useNavigate();
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
   const [newDevice, setNewDevice] = useState({
     name: '',
     location: '',
     ipAddress: ''
   });
+  const addNameInputRef = useRef(null);
+  const addModalRef = useRef(null);
 
   useEffect(() => {
     fetchDevices();
@@ -45,7 +48,7 @@ function SensorManagement() {
       if (result.success) {
         fetchDevices();
         setNewDevice({ name: '', location: '', ipAddress: '' });
-        setShowAddForm(false);
+        setIsAdding(false);
   alert('Device added successfully!');
       } else {
         alert(result.message || 'Error adding device');
@@ -112,6 +115,95 @@ function SensorManagement() {
     return name.replace(/ESP32\s*Device\s*#?(\d+)/gi, (_, num) => `Device #${num}`);
   };
 
+  // Accessible Modal with focus trap, ESC close, body scroll lock, and animated close
+  const Modal = React.forwardRef(({ title, onClose, children, initialFocusRef }, ref) => {
+    const [show, setShow] = useState(false);
+    const modalRef = useRef(null);
+    const previouslyFocusedRef = useRef(null);
+
+    React.useImperativeHandle(ref, () => ({
+      requestClose: () => handleRequestClose(),
+    }));
+
+    const handleRequestClose = useCallback(() => {
+      setShow(false);
+      setTimeout(() => onClose?.(), 200);
+    }, [onClose]);
+
+    useEffect(() => {
+      previouslyFocusedRef.current = document.activeElement;
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      const t = setTimeout(() => setShow(true), 0);
+
+      const focusTimer = setTimeout(() => {
+        if (initialFocusRef?.current) {
+          initialFocusRef.current.focus();
+        } else {
+          modalRef.current?.focus();
+        }
+      }, 10);
+
+  const onKeyDown = (e) => {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          handleRequestClose();
+        }
+        if (e.key === 'Tab') {
+          const focusable = modalRef.current?.querySelectorAll(
+            'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+          );
+          if (!focusable || focusable.length === 0) return;
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (e.shiftKey) {
+            if (document.activeElement === first) {
+              e.preventDefault();
+              last.focus();
+            }
+          } else {
+            if (document.activeElement === last) {
+              e.preventDefault();
+              first.focus();
+            }
+          }
+        }
+      };
+      document.addEventListener('keydown', onKeyDown);
+
+      return () => {
+        clearTimeout(t);
+        clearTimeout(focusTimer);
+        document.removeEventListener('keydown', onKeyDown);
+        document.body.style.overflow = prevOverflow;
+        previouslyFocusedRef.current && previouslyFocusedRef.current.focus?.();
+      };
+  }, [initialFocusRef, handleRequestClose]);
+
+    const onOverlayMouseDown = (e) => {
+      if (e.target === e.currentTarget) handleRequestClose();
+    };
+
+    return (
+      <div className="modal-overlay" onMouseDown={onOverlayMouseDown}>
+        <div
+          className={`modal ${show ? 'show' : ''}`}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="add-device-title"
+          ref={modalRef}
+          tabIndex={-1}
+        >
+          <button aria-label="Close" className="modal-close" onClick={handleRequestClose}>×</button>
+          <h2 id="add-device-title" className="modal-title">{title}</h2>
+          <div className="modal-content">
+            {children}
+          </div>
+        </div>
+      </div>
+    );
+  });
+
   if (loading) return <div style={{ textAlign: 'center', padding: '2rem' }}>Loading devices...</div>;
 
   return (
@@ -119,103 +211,56 @@ function SensorManagement() {
   <h1 style={{ color: '#2c3e50', marginBottom: '1rem' }}>🔧 Device Management</h1>
       
       <button 
-        onClick={() => setShowAddForm(!showAddForm)}
-        style={{
-          backgroundColor: showAddForm ? '#e74c3c' : '#27ae60',
-          color: 'white',
-          border: 'none',
-          padding: '0.75rem 1.5rem',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          marginBottom: '1rem'
-        }}
+        onClick={() => setIsAdding(true)}
+        className="btn btn-success"
+        style={{ marginBottom: '1rem' }}
       >
-  {showAddForm ? '❌ Cancel' : '➕ Add New Device'}
+        ➕ Add New Device
       </button>
-
-      {showAddForm && (
-        <form 
-          onSubmit={addDevice} 
-          style={{ 
-            marginBottom: '2rem', 
-            padding: '1.5rem', 
-            border: '2px solid #3498db',
-            borderRadius: '8px',
-            backgroundColor: '#f8f9fa'
-          }}
-        >
-          <h3 style={{ color: '#2c3e50', marginBottom: '1rem' }}>Add New Device</h3>
-          
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
-              Device Name:
-            </label>
-            <input
-              type="text"
-              value={newDevice.name}
-              onChange={(e) => setNewDevice({...newDevice, name: e.target.value})}
-              placeholder="e.g., Device #2"
-              style={{
-                width: '100%',
-                padding: '0.5rem',
-                border: '1px solid #ddd',
-                borderRadius: '4px'
-              }}
-              required
-            />
-          </div>
-          
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
-              Location:
-            </label>
-            <input
-              type="text"
-              value={newDevice.location}
-              onChange={(e) => setNewDevice({...newDevice, location: e.target.value})}
-              placeholder="e.g., Greenhouse Section B"
-              style={{
-                width: '100%',
-                padding: '0.5rem',
-                border: '1px solid #ddd',
-                borderRadius: '4px'
-              }}
-              required
-            />
-          </div>
-          
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
-              IP Address (Optional):
-            </label>
-            <input
-              type="text"
-              value={newDevice.ipAddress}
-              onChange={(e) => setNewDevice({...newDevice, ipAddress: e.target.value})}
-              placeholder="e.g., 192.168.1.100"
-              style={{
-                width: '100%',
-                padding: '0.5rem',
-                border: '1px solid #ddd',
-                borderRadius: '4px'
-              }}
-            />
-          </div>
-          
-          <button 
-            type="submit"
-            style={{
-              backgroundColor: '#27ae60',
-              color: 'white',
-              border: 'none',
-              padding: '0.75rem 1.5rem',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            ➕ Add Device
-          </button>
-        </form>
+      {isAdding && (
+        <Modal title="Add New Device" onClose={() => setIsAdding(false)} initialFocusRef={addNameInputRef} ref={addModalRef}>
+          <form onSubmit={addDevice} className="device-form modal-form">
+            <div className="form-grid">
+              <div className="form-group">
+                <label htmlFor="add-device-name">Device Name</label>
+                <input
+                  id="add-device-name"
+                  type="text"
+                  ref={addNameInputRef}
+                  value={newDevice.name}
+                  onChange={(e) => setNewDevice({ ...newDevice, name: e.target.value })}
+                  placeholder="e.g., Device #2"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="add-device-location">Location</label>
+                <input
+                  id="add-device-location"
+                  type="text"
+                  value={newDevice.location}
+                  onChange={(e) => setNewDevice({ ...newDevice, location: e.target.value })}
+                  placeholder="e.g., Greenhouse Section B"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="add-device-ip">IP Address (Optional)</label>
+                <input
+                  id="add-device-ip"
+                  type="text"
+                  value={newDevice.ipAddress}
+                  onChange={(e) => setNewDevice({ ...newDevice, ipAddress: e.target.value })}
+                  placeholder="e.g., 192.168.1.100"
+                />
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button type="button" className="btn btn-secondary" onClick={() => addModalRef.current?.requestClose()}>Cancel</button>
+              <button type="submit" className="btn btn-success">Save</button>
+            </div>
+          </form>
+        </Modal>
       )}
 
       <div>
@@ -305,9 +350,6 @@ function SensorManagement() {
                           </h6>
                           <p style={{ margin: '0', fontSize: '0.8rem', color: '#6c757d' }}>
                             📡 {sensor.mqttTopic}
-                          </p>
-                          <p style={{ margin: '0', fontSize: '0.8rem', color: '#6c757d' }}>
-                            📍 Pin: {sensor.pin}
                           </p>
                         </div>
                         

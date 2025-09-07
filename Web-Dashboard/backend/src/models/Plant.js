@@ -46,9 +46,9 @@ const plantSchema = new mongoose.Schema({
       required: true
     }
   },
-  assignedDevice: {
-    type: String,
-    default: null,
+  assignedDevices: {
+    type: [String],
+    default: [],
     index: true
   },
   plantedDate: {
@@ -77,7 +77,7 @@ const plantSchema = new mongoose.Schema({
 });
 
 // Index for faster queries
-plantSchema.index({ assignedDevice: 1, isActive: 1 });
+plantSchema.index({ assignedDevices: 1, isActive: 1 });
 plantSchema.index({ stage: 1, isActive: 1 });
 
 module.exports = mongoose.model('Plant', plantSchema);
