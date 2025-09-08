@@ -3,7 +3,7 @@
   "name": "intelligent-greenhouse",
   "builds": [
     {
-      "src": "Web-Dashboard/front-end/package.json",
+      "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
         "outputDirectory": "build"
