@@ -1,0 +1,175 @@
+/* Generic Sensor Live Components using Tailwind CSS */
+@tailwind components;
+
+@layer components {
+  .sensor-card {
+    /* Modern card: subtle background, soft shadow, rounded corners */
+    @apply rounded-2xl p-6 m-3 min-w-[260px] max-w-[360px]
+      bg-gradient-to-b from-white via-primary-50 to-primary-100
+    shadow-md border border-primary-200/60
+      transition-all duration-300 ease-out cursor-default;
+  }
+
+  /* Type accents - subtle colored border and header icon tint */
+  .sensor-card.type-soil_moisture { @apply border-green-200/70; }
+  .sensor-card.type-temperature { @apply border-red-200/70; }
+  .sensor-card.type-humidity { @apply border-blue-200/70; }
+  .sensor-card.type-light { @apply border-yellow-200/70; }
+
+  .sensor-header {
+    /* Center header content vertically and horizontally */
+    @apply flex flex-col items-center justify-center mb-5 gap-3;
+  }
+
+  .sensor-icon {
+  @apply text-4xl transition-transform duration-200 ease-out;
+  }
+
+  .sensor-info {
+    @apply text-center;
+  }
+
+  .sensor-name {
+    @apply m-0 text-primary-900 text-lg sm:text-xl font-semibold tracking-tight;
+  }
+
+  /* Removed device/topic secondary lines */
+
+  .sensor-value-container {
+    /* Center value and badge with comfortable spacing */
+    @apply text-center mb-3 flex flex-col items-center justify-center gap-3;
+  }
+
+  .sensor-value {
+    @apply text-4xl sm:text-5xl font-extrabold mb-1 transition-all duration-300 leading-none;
+  }
+
+  .connection-status {
+    /* Pill badge with transitions */
+    @apply inline-block px-4 py-1.5 rounded-full text-white 
+      text-[11px] sm:text-xs font-bold tracking-wide uppercase 
+      transition-all duration-200 shadow-sm hover:shadow-md
+      hover:brightness-105;
+  }
+
+  .status-connected {
+    @apply bg-success-600;
+  }
+
+  .status-connecting {
+    @apply bg-warning-500;
+  }
+
+  .status-error {
+    @apply bg-danger-500;
+  }
+
+  .status-disconnected {
+    @apply bg-primary-400;
+  }
+
+  /* Removed secondary labels and extra meta sections; spacing tightened above */
+
+  /* Value color classes */
+  .value-critical {
+    @apply text-danger-500;
+  }
+
+  .value-warning {
+    @apply text-warning-500;
+  }
+
+  .value-good {
+    @apply text-success-600;
+  }
+
+  .value-normal {
+    @apply text-primary-800;
+  }
+
+  /* Status badge color classes */
+  .badge-critical {
+    @apply bg-danger-500;
+  }
+
+  .badge-warning {
+    @apply bg-warning-500;
+  }
+
+  .badge-good {
+    @apply bg-success-600;
+  }
+
+  .badge-normal {
+    @apply bg-primary-800;
+  }
+
+  /* Loading animation */
+  .sensor-card.loading {
+    @apply animate-pulse;
+  }
+
+  /* Hover polish */
+  .sensor-card:hover .sensor-icon { @apply scale-110; }
+  .sensor-card:hover { @apply -translate-y-0.5 shadow-lg; }
+
+  /* Connection indicators */
+  .connection-indicator {
+    @apply relative;
+  }
+
+  .connection-indicator::before {
+    @apply content-[''] absolute -top-0.5 -right-0.5 w-2 h-2 
+           rounded-full bg-current;
+  }
+
+  .indicator-connected::before {
+    @apply bg-success-600 animate-pulse;
+  }
+
+  .indicator-connecting::before {
+    @apply bg-warning-500 animate-pulse;
+  }
+
+  .indicator-error::before {
+    @apply bg-danger-500;
+  }
+
+  .indicator-disconnected::before {
+    @apply bg-primary-400;
+  }
+  /* Removed secondary labels and extra meta sections; spacing handled above */
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .sensor-card {
+    @apply min-w-full mx-0 my-2 p-5;
+  }
+  
+  .sensor-value {
+    @apply text-3xl;
+  }
+  
+  .sensor-name {
+    @apply text-base;
+  }
+}
+
+/* Custom pulse animation for connection indicators */
+@keyframes connectionPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.indicator-connected::before {
+  animation: connectionPulse 2s ease-in-out infinite;
+}
+
+.indicator-connecting::before {
+  animation: connectionPulse 1s ease-in-out infinite;
+}

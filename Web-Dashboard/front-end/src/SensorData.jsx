@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import GenericSensorLive from './components/GenericSensorLive';
+import './styles/SensorData.css';
+import './styles/DashboardPages.css';
 
-const API_BASE = 'http://localhost:5001/api';
+const API_BASE = 'http://localhost:3003/api';
 
 function SensorData() {
   const navigate = useNavigate();
@@ -46,26 +48,24 @@ function SensorData() {
 
   const systemStatus = getSystemStatus();
 
+  // Normalize labels like "ESP32 Device #X" -> "Device #X"
+  const formatDeviceLabel = (name) => {
+    if (!name) return '';
+    return name.replace(/ESP32\s*Device\s*#?(\d+)/gi, (_, num) => `Device #${num}`);
+  };
+
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '3rem' }}>
-        <h2>Loading sensors...</h2>
-        <div style={{ 
-          width: '50px', 
-          height: '50px', 
-          border: '4px solid #f3f3f3',
-          borderTop: '4px solid #3498db',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-          margin: '1rem auto'
-        }}></div>
+      <div className="text-center p-12">
+        <h2 className="text-xl text-primary-800 mb-4">Loading sensors...</h2>
+        <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto"></div>
       </div>
     );
   }
 
-  // Group sensors by device
+  // Group sensors by device (formatting label for display only)
   const deviceGroups = sensors.reduce((acc, sensor) => {
-    const deviceKey = `${sensor.deviceName} (${sensor.deviceLocation})`;
+    const deviceKey = `${formatDeviceLabel(sensor.deviceName)} (${sensor.deviceLocation})`;
     if (!acc[deviceKey]) {
       acc[deviceKey] = [];
     }
@@ -74,134 +74,47 @@ function SensorData() {
   }, {});
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
-      <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-        <h1 style={{ color: '#2c3e50', marginBottom: '1rem', fontSize: '2.5rem' }}>
-          📊 Live Sensor Dashboard
-        </h1>
-        
-        <div style={{
-          display: 'inline-block',
-          padding: '0.75rem 1.5rem',
-          borderRadius: '25px',
-          backgroundColor: systemStatus.color,
-          color: 'white',
-          fontWeight: 'bold',
-          marginBottom: '1rem'
-        }}>
-          System Status: {systemStatus.status}
+  <main className="page-container" role="main">
+      <header className="page-header fade-in">
+        <h1 className="page-title">Live Sensor Data</h1>
+    <div className="mt-2 mb-3 inline-flex items-center gap-2 px-4 py-2 rounded-full text-white font-semibold" style={{ backgroundColor: systemStatus.color }} role="status" aria-live="polite">
+          <span aria-hidden>📡</span>
+          <span>System Status: {systemStatus.status}</span>
         </div>
-        
-        <p style={{ color: '#7f8c8d', fontSize: '1.1rem' }}>
-          Monitoring {sensors.length} active sensors from {Object.keys(deviceGroups).length} ESP32 devices
-        </p>
-      </div>
+    <p className="page-subtitle">Monitoring {sensors.length} active sensors from {Object.keys(deviceGroups).length} devices</p>
+      </header>
 
       {sensors.length === 0 ? (
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '4rem',
-          backgroundColor: '#f8f9fa',
-          borderRadius: '12px',
-          border: '2px dashed #dee2e6'
-        }}>
-          <h3 style={{ color: '#6c757d', marginBottom: '1rem' }}>No active sensors found</h3>
-          <p style={{ color: '#adb5bd', marginBottom: '2rem' }}>
-            Add some ESP32 devices in the management panel to see live data here.
+        <div className="text-center p-16 bg-primary-50 rounded-xl border-2 border-dashed border-primary-200 max-w-2xl mx-auto">
+          <h3 className="text-primary-600 mb-4 text-xl">No active sensors found</h3>
+          <p className="text-primary-500 mb-8 text-base">
+            Add some devices in the management panel to see live data here.
           </p>
           <button 
             onClick={() => navigate('/manage-sensors')}
-            style={{
-              backgroundColor: '#3498db',
-              color: 'white',
-              border: 'none',
-              padding: '1rem 2rem',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '1rem',
-              fontWeight: 'bold'
-            }}
+            className="bg-blue-500 hover:bg-blue-600 text-white border-none px-8 py-4 rounded-lg cursor-pointer text-base font-bold transition-colors duration-200"
           >
-            🔧 Manage ESP32 Devices
+            🔧 Manage Devices
           </button>
         </div>
       ) : (
         Object.entries(deviceGroups).map(([deviceName, deviceSensors]) => (
-          <div key={deviceName} style={{ marginBottom: '3rem' }}>
-            <h2 style={{ 
-              color: '#495057', 
-              marginBottom: '1rem',
-              padding: '0.75rem 1rem',
-              backgroundColor: '#e9ecef',
-              borderRadius: '8px',
-              borderLeft: '4px solid #007bff'
-            }}>
-              📡 {deviceName}
+          <section key={deviceName} className="page-section mb-8 fade-in" aria-label={deviceName}>
+            <h2 className="card-title mb-3 flex items-center gap-2 text-primary-800">
+              <span aria-hidden>📡</span>
+              <span>{deviceName}</span>
             </h2>
-            
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-              gap: '1.5rem',
-              marginBottom: '2rem'
-            }}>
+            <div className="sensors-grid">
               {deviceSensors.map(sensor => (
-                <GenericSensorLive key={`${sensor.deviceId}-${sensor.id}`} sensor={sensor} />
+                <div key={`${sensor.deviceId}-${sensor.id}`} className="sensor-wrapper">
+                  <GenericSensorLive sensor={sensor} />
+                </div>
               ))}
             </div>
-          </div>
+          </section>
         ))
       )}
-
-      <div style={{ textAlign: 'center', marginTop: '3rem' }}>
-        <button 
-          onClick={() => navigate('/')}
-          style={{
-            backgroundColor: '#34495e',
-            color: 'white',
-            border: 'none',
-            padding: '0.75rem 1.5rem',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            marginRight: '1rem',
-            fontSize: '1rem'
-          }}
-        >
-          ← Back to Home
-        </button>
-        
-        <button 
-          onClick={() => navigate('/manage-sensors')}
-          style={{
-            backgroundColor: '#3498db',
-            color: 'white',
-            border: 'none',
-            padding: '0.75rem 1.5rem',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '1rem'
-          }}
-        >
-          🔧 Manage ESP32 Devices
-        </button>
-        
-        <button 
-          onClick={fetchSensors}
-          style={{
-            backgroundColor: '#27ae60',
-            color: 'white',
-            border: 'none',
-            padding: '0.75rem 1.5rem',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            marginLeft: '1rem',
-            fontSize: '1rem'
-          }}
-        >
-          🔄 Refresh
-        </button>
-      </div>
-    </div>
+    </main>
   );
 }
 
