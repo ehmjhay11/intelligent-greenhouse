@@ -1,21 +1,19 @@
 {
   "version": 2,
+  "name": "intelligent-greenhouse",
   "builds": [
     {
       "src": "Web-Dashboard/front-end/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "build"
+        "buildCommand": "npm run build",
+        "outputDirectory": "build"
       }
     }
   ],
   "routes": [
     {
-      "src": "/static/(.*)",
-      "headers": {
-        "cache-control": "s-maxage=31536000,immutable"
-      },
-      "dest": "/static/$1"
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
