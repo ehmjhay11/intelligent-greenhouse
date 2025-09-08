@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "name": "intelligent-greenhouse-nextjs",
+  "builds": [
+    {
+      "src": "Web-Dashboard/nextjs-frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "outputDirectory": "out"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}
