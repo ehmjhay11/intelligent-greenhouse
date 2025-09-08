@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import GenericSensorLive from './components/GenericSensorLive';
 import './styles/SensorData.css';
 import './styles/DashboardPages.css';
-
-const API_BASE = 'http://localhost:3003/api';
+import API_BASE from './lib/apiBase';
 
 function SensorData() {
   const navigate = useNavigate();

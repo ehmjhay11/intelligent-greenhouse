@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './styles/SensorManagement.css';
-
-const API_BASE = 'http://localhost:3003/api';
+import API_BASE from './lib/apiBase';
 
 function SensorManagement() {
   const navigate = useNavigate();

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import API_BASE from './lib/apiBase';
 import './styles/PlantManagement.css';
 
 const PlantManagement = () => {
@@ -25,7 +26,7 @@ const PlantManagement = () => {
   const fetchPlants = useCallback(async () => {
     try {
       console.log('Fetching plants from backend...');
-      const response = await fetch('http://localhost:3003/api/plants');
+  const response = await fetch(`${API_BASE}/plants`);
       const result = await response.json();
       console.log('Plants response:', result);
       if (result.success && result.data) {
@@ -63,7 +64,7 @@ const PlantManagement = () => {
     try {
       // Fetch real devices from the SensorManagement API
       console.log('Fetching real devices from API...');
-      const response = await fetch('http://localhost:3003/api/sensors');
+  const response = await fetch(`${API_BASE}/sensors`);
       const result = await response.json();
       
       if (result.success && result.data) {
@@ -95,8 +96,8 @@ const PlantManagement = () => {
     e.preventDefault();
     try {
       const url = editingPlant
-        ? `http://localhost:3003/api/plants/${editingPlant._id}`
-        : 'http://localhost:3003/api/plants';
+        ? `${API_BASE}/plants/${editingPlant._id}`
+        : `${API_BASE}/plants`;
       const method = editingPlant ? 'PUT' : 'POST';
       
       const response = await fetch(url, {
@@ -122,7 +123,7 @@ const PlantManagement = () => {
   const handleDelete = async (plantId) => {
     if (window.confirm('Are you sure you want to delete this plant?')) {
       try {
-        const response = await fetch(`http://localhost:3003/api/plants/${plantId}`, {
+  const response = await fetch(`${API_BASE}/plants/${plantId}`, {
           method: 'DELETE',
         });
 
@@ -135,63 +136,7 @@ const PlantManagement = () => {
     }
   };
 
-  const handleAssignDevice = async (plantId, deviceId) => {
-    try {
-      console.log(`🔄 Assigning device ${deviceId} to plant ${plantId}`);
-      console.log('Current plants before assignment:', plants.map(p => ({ id: p._id, name: p.name, assignedDevice: p.assignedDevice })));
-      console.log('Current devices before assignment:', devices.map(d => ({ id: d.id, name: d.name, assignedPlant: d.assignedPlant })));
-      
-      const response = await fetch(`http://localhost:3003/api/plants/${plantId}/assign-device`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ deviceId: String(deviceId) }),
-      });
-
-      const result = await response.json();
-      console.log('Assignment response:', result);
-
-      if (response.ok) {
-        // Refresh both plants and devices to show updated assignments
-        console.log('✅ Assignment successful, refreshing data...');
-        await fetchPlants();
-        console.log(`✅ Device ${deviceId} successfully assigned to plant`);
-      } else {
-        console.error('❌ Error assigning device:', result);
-        alert(`Failed to assign device: ${result.message || 'Unknown error'}`);
-      }
-    } catch (error) {
-      console.error('❌ Error assigning device:', error);
-      alert('Failed to assign device. Please try again.');
-    }
-  };
-
-  const handleUnassignDevice = async (plantId) => {
-    try {
-      console.log(`🔄 Unassigning device from plant ${plantId}`);
-      const response = await fetch(`http://localhost:3003/api/plants/${plantId}/assign-device`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ deviceId: null }),
-      });
-
-      if (response.ok) {
-        // Refresh both plants and devices to show updated assignments
-        console.log('✅ Unassignment successful, refreshing data...');
-        await fetchPlants();
-      } else {
-        const errorData = await response.json();
-        console.error('❌ Error unassigning device:', errorData);
-        alert(`Failed to unassign device: ${errorData.message || 'Unknown error'}`);
-      }
-    } catch (error) {
-      console.error('❌ Error unassigning device:', error);
-      alert('Failed to unassign device. Please try again.');
-    }
-  };
+  // Removed unused handleAssignDevice and handleUnassignDevice (assignment handled inline below)
 
 // ...existing code...
 const sendThresholdsToDevice = async (plant) => {
@@ -210,7 +155,7 @@ const sendThresholdsToDevice = async (plant) => {
       return;
     }
     
-    const requestUrl = `http://localhost:3003/api/plants/${plant._id}/send-thresholds`;
+  const requestUrl = `${API_BASE}/plants/${plant._id}/send-thresholds`;
     console.log('📤 Request URL:', requestUrl);
     console.log('📤 Request Method: POST');
     console.log('🕐 Timestamp:', new Date().toISOString());
@@ -276,7 +221,7 @@ const sendThresholdsToDevice = async (plant) => {
       console.log('📋 Device ID:', deviceId);
       console.log('🕐 Timestamp:', new Date().toISOString());
       
-      const requestUrl = 'http://localhost:3003/api/plants/test-command';
+  const requestUrl = `${API_BASE}/plants/test-command`;
       console.log('📤 Request URL:', requestUrl);
       console.log('📤 Request Body:', { deviceId });
       
@@ -369,12 +314,7 @@ const sendThresholdsToDevice = async (plant) => {
     return colors[stage] || '#6c757d';
   };
 
-  const getDeviceForPlant = (plantId) => {
-    const plant = plants.find(p => p._id === plantId);
-  if (!plant || !Array.isArray(plant.assignedDevices) || plant.assignedDevices.length === 0) return null;
-  // Return first for compatibility when needed
-  return devices.find(device => String(device.id) === String(plant.assignedDevices[0]));
-  };
+  // getDeviceForPlant removed (no longer used)
 
   // Removed unused getUnassignedDevices helper
 
@@ -800,8 +740,6 @@ const sendThresholdsToDevice = async (plant) => {
 
       <div className="plant-grid">
         {plants.map(plant => {
-          const assignedDevice = getDeviceForPlant(plant._id);
-          
           return (
             <div key={plant._id} className="plant-card">
               <div className="plant-header">
@@ -920,7 +858,7 @@ const sendThresholdsToDevice = async (plant) => {
                     // Add device to plant's assignedDevices
                     const plant = plants.find(p => p._id === selectedPlantId);
                     const updated = Array.from(new Set([...(plant?.assignedDevices || []), id]));
-                    await fetch(`http://localhost:3003/api/plants/${selectedPlantId}/set-devices`, {
+                    await fetch(`${API_BASE}/plants/${selectedPlantId}/set-devices`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ deviceIds: updated })
@@ -931,7 +869,7 @@ const sendThresholdsToDevice = async (plant) => {
                     const plantWithDevice = plants.find(p => Array.isArray(p.assignedDevices) && p.assignedDevices.includes(id));
                     if (plantWithDevice) {
                       const updated = plantWithDevice.assignedDevices.filter(d => d !== id);
-                      await fetch(`http://localhost:3003/api/plants/${plantWithDevice._id}/set-devices`, {
+                      await fetch(`${API_BASE}/plants/${plantWithDevice._id}/set-devices`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ deviceIds: updated })
