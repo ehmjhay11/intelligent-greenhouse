@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import API_BASE from './lib/apiBase';
 import './styles/AlertsPanel.css';
 import './styles/DashboardPages.css';
 
@@ -14,7 +15,7 @@ const AlertsPanel = () => {
 
   const fetchAlerts = async () => {
     try {
-      const response = await fetch('http://localhost:3003/api/alerts');
+      const response = await fetch(`${API_BASE}/alerts`);
       const result = await response.json();
       if (result.success) {
         setAlerts(result.data);
@@ -28,7 +29,7 @@ const AlertsPanel = () => {
 
   const acknowledgeAlert = async (alertId) => {
     try {
-      await fetch(`http://localhost:3003/api/alerts/${alertId}/acknowledge`, {
+      await fetch(`${API_BASE}/alerts/${alertId}/acknowledge`, {
         method: 'POST',
       });
       fetchAlerts();

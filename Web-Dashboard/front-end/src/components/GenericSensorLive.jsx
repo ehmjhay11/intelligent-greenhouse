@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import API_BASE from '../lib/apiBase';
 import '../styles/GenericSensorLive.css';
 
 const GenericSensorLive = ({ sensor }) => {
@@ -11,7 +12,7 @@ const GenericSensorLive = ({ sensor }) => {
     const fetchSensorData = async () => {
       try {
         setConnectionStatus('connecting');
-        const response = await fetch(`http://localhost:3003/api/sensors/latest/${sensor.deviceId}/${sensor.type}`);
+  const response = await fetch(`${API_BASE}/sensors/latest/${sensor.deviceId}/${sensor.type}`);
         
         if (response.ok) {
           const data = await response.json();

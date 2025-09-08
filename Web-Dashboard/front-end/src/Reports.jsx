@@ -12,6 +12,7 @@ import {
   TimeScale,
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
+import API_BASE from './lib/apiBase';
 import './styles/DashboardPages.css';
 
 ChartJS.register(
@@ -26,8 +27,8 @@ ChartJS.register(
 );
 
 const API = {
-  historical: (device, range) => `http://localhost:3003/api/sensors/historical?device=${device}&range=${range}`,
-  logs: (type, from, to) => `http://localhost:3003/api/system/logs?type=${type || ''}&from=${from || ''}&to=${to || ''}`,
+  historical: (device, range) => `${API_BASE}/sensors/historical?device=${device}&range=${range}`,
+  logs: (type, from, to) => `${API_BASE}/system/logs?type=${type || ''}&from=${from || ''}&to=${to || ''}`,
 };
 
 function useHistorical(device, range, metric) {
