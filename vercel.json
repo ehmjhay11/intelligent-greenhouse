@@ -6,8 +6,8 @@
       "src": "Web-Dashboard/front-end/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "buildCommand": "npm run build",
-        "outputDirectory": "build"
+        "buildCommand": "cd Web-Dashboard/front-end && npm ci && npm run build",
+        "outputDirectory": "Web-Dashboard/front-end/build"
       }
     }
   ],
